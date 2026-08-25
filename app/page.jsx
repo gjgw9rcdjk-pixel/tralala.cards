@@ -1,9 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CATEGORIES, QUESTIONS, CORE, OPT_IN, TINTS, STRINGS, SURFACE_OPTIONS, LANGUAGES } from '@/lib/content';
+import { CATEGORIES, QUESTIONS, CORE, OPT_IN, TINTS, STRINGS, SURFACE_OPTIONS, LANGUAGES, SEED_FEEDBACK } from '@/lib/content';
 import { buildOrder, shuffle } from '@/lib/deck';
-import { savedLang, saveLang, track, rateQuestion, fetchStats } from '@/lib/analytics';
+import { savedLang, saveLang, track, rateQuestion, fetchStats, submitFeedback, fetchFeedback, voteFeedback } from '@/lib/analytics';
 
 const SURFACE = 'Warm paper'; // 'Warm paper' | 'Ash grey' | 'Category tint' | 'Ink card'
 
@@ -32,6 +32,11 @@ export default function App() {
   const [shareDone, setShareDone] = useState('');
   const [copyDone, setCopyDone] = useState('');
   const [sent, setSent] = useState(false);
+  const [feedbackText, setFeedbackText] = useState('');
+  const [feedbackError, setFeedbackError] = useState('');
+  const [board, setBoard] = useState([]);
+  const [boardIsSeed, setBoardIsSeed] = useState(false);
+  const [myFeedbackVotes, setMyFeedbackVotes] = useState({});
 
   const frontRef = useRef(null);
   const busy = useRef(false);
@@ -53,6 +58,19 @@ export default function App() {
       if (s) setLiveStats((prev) => ({ ...prev, ...s }));
     });
   }, []);
+
+  useEffect(() => {
+    if (view !== 'feedback') return;
+    fetchFeedback().then((items) => {
+      if (items && items.length > 0) {
+        setBoard(items);
+        setBoardIsSeed(false);
+      } else {
+        setBoard(SEED_FEEDBACK[lang].map((t, i) => ({ id: -(i + 1), text: t, up: 0, down: 0 })));
+        setBoardIsSeed(true);
+      }
+    });
+  }, [view, lang]);
 
   const chooseLang = (l) => {
     setLang(l);
@@ -157,6 +175,58 @@ export default function App() {
     });
   };
 
+  const sendFeedback = async () => {
+    const trimmed = feedbackText.trim();
+    if (!trimmed) return;
+    setFeedbackError('');
+    const res = await submitFeedback(trimmed);
+    if (res?.status === 429) {
+      setFeedbackError(ui.rateLimited);
+      return;
+    }
+    if (!res || res.error) {
+      setFeedbackError(ui.feedbackFailed);
+      return;
+    }
+    setBoard((b) => (boardIsSeed ? [res] : [res, ...b]));
+    setBoardIsSeed(false);
+    setFeedbackText('');
+    setSent(true);
+  };
+
+  const voteBoardItem = (id, kind) => {
+    const prevKind = myFeedbackVotes[id] || null;
+    const nextKind = prevKind === kind ? null : kind;
+    setMyFeedbackVotes((v) => {
+      const n = { ...v };
+      if (nextKind === null) delete n[id];
+      else n[id] = nextKind;
+      return n;
+    });
+
+    // Example/seed items (negative id) aren't real backend rows — voting on
+    // them just updates the local count so the interaction is testable
+    // before any real feedback exists.
+    if (id < 0) {
+      setBoard((b) =>
+        b.map((it) => {
+          if (it.id !== id) return it;
+          let { up, down } = it;
+          if (prevKind === 'up') up -= 1;
+          if (prevKind === 'down') down -= 1;
+          if (nextKind === 'up') up += 1;
+          if (nextKind === 'down') down += 1;
+          return { ...it, up, down };
+        })
+      );
+      return;
+    }
+
+    voteFeedback(id, nextKind).then((res) => {
+      if (res) setBoard((b) => b.map((it) => (it.id === res.id ? { ...it, up: res.up, down: res.down } : it)));
+    });
+  };
+
   const rating = ratings[idx] || null;
   const favIds = useMemo(
     () => Object.keys(ratings).filter((i) => ratings[i] !== 'down').map(Number),
@@ -249,7 +319,7 @@ export default function App() {
           {[
             [ui.fav, () => setView('favs')],
             [ui.stats, () => setView('stats')],
-            [ui.say, () => { setView('feedback'); setSent(false); }],
+            [ui.say, () => { setView('feedback'); setSent(false); setFeedbackError(''); }],
           ].map(([t, fn]) => (
             <button key={t} onClick={fn} style={{ ...mono(10), color: 'rgba(232,230,225,.5)', padding: '10px 7px' }}>
               {t}
@@ -524,17 +594,20 @@ export default function App() {
       {view === 'feedback' && (
         <div style={overlay}>
           <OverlayHead title={ui.sayTitle} onClose={() => setView('deck')} />
-          <div style={{ flex: 1, padding: '0 22px 46px', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ flex: 1, overflow: 'auto', padding: '0 22px 46px', display: 'flex', flexDirection: 'column' }}>
             {sent ? (
               <div className="serif" style={{ fontSize: 30, lineHeight: 1.2, paddingTop: 8 }}>{ui.thanks}</div>
             ) : (
               <>
                 <p style={{ font: '400 12px/1.7 var(--font-mono), monospace', color: 'rgba(232,230,225,.45)', margin: 0 }}>{ui.sayNote}</p>
                 <textarea
+                  value={feedbackText}
+                  onChange={(e) => setFeedbackText(e.target.value.slice(0, 500))}
                   placeholder="…"
                   style={{
                     marginTop: 18,
-                    flex: 1,
+                    height: 120,
+                    flex: 'none',
                     background: 'transparent',
                     border: '1px solid rgba(232,230,225,.16)',
                     borderRadius: 4,
@@ -544,11 +617,39 @@ export default function App() {
                     resize: 'none',
                   }}
                 />
-                <button onClick={() => setSent(true)} style={{ marginTop: 18, background: INK, color: SCREEN, padding: 18, borderRadius: 4, ...mono(11, 600, '.18em') }}>
+                <div style={{ marginTop: 6, textAlign: 'right', ...mono(9, 500, '.08em'), color: 'rgba(232,230,225,.3)' }}>
+                  {feedbackText.length}/500
+                </div>
+                {feedbackError && (
+                  <div style={{ marginTop: 8, ...mono(10, 500, '.06em'), color: 'rgba(232,230,225,.55)' }}>{feedbackError}</div>
+                )}
+                <button onClick={sendFeedback} style={{ marginTop: 12, background: INK, color: SCREEN, padding: 18, borderRadius: 4, ...mono(11, 600, '.18em') }}>
                   {ui.send}
                 </button>
               </>
             )}
+
+            <div style={{ marginTop: 30, marginBottom: 14, flex: 'none', ...mono(10, 500, '.16em'), color: 'rgba(232,230,225,.35)' }}>{ui.boardTitle}</div>
+            {boardIsSeed && (
+              <p style={{ font: '400 12px/1.7 var(--font-mono), monospace', color: 'rgba(232,230,225,.3)', margin: '0 0 4px' }}>{ui.noFeedbackYet}</p>
+            )}
+            {board.map((item) => (
+              <div key={item.id} style={{ padding: '16px 0', borderTop: '1px solid rgba(232,230,225,.12)', display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+                <div style={{ flex: 'none', width: 26, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                  <button onClick={() => voteBoardItem(item.id, 'up')} style={voteArrowBtn(myFeedbackVotes[item.id] === 'up')}>▲</button>
+                  <span style={{ ...mono(11, 600, '0'), color: 'rgba(232,230,225,.5)' }}>{item.up - item.down}</span>
+                  <button onClick={() => voteBoardItem(item.id, 'down')} style={voteArrowBtn(myFeedbackVotes[item.id] === 'down')}>▼</button>
+                </div>
+                <div style={{ flex: 1, paddingTop: 2 }}>
+                  {boardIsSeed && (
+                    <div style={{ marginBottom: 4, ...mono(8, 600, '.1em'), color: 'rgba(232,230,225,.3)' }}>{ui.exampleTag}</div>
+                  )}
+                  <div style={{ font: '400 13px/1.55 var(--font-mono), monospace', color: 'rgba(232,230,225,.75)', whiteSpace: 'pre-wrap' }}>
+                    {item.text}
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -592,4 +693,18 @@ const rateBtn = (active) => ({
   color: active ? '#0c0c0d' : 'rgba(232,230,225,.4)',
   background: active ? '#e8e6e1' : 'rgba(232,230,225,.07)',
   transform: active ? 'scale(1.08)' : 'scale(1)',
+});
+
+const voteArrowBtn = (active) => ({
+  width: 26,
+  height: 20,
+  flex: 'none',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontSize: 12,
+  lineHeight: 1,
+  transition: 'transform .15s, color .15s',
+  color: active ? INK : 'rgba(232,230,225,.32)',
+  transform: active ? 'scale(1.2)' : 'scale(1)',
 });
