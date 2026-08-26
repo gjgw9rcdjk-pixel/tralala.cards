@@ -436,7 +436,7 @@ export default function App() {
 
       {/* ── home ───────────────────────────────────────────── */}
       {view === 'intro' && (
-        <div style={{ ...overlay, zIndex: 80, padding: '30px 30px 34px' }}>
+        <div style={{ ...overlay, zIndex: 80, padding: 'calc(env(safe-area-inset-top) + 30px) 30px 34px' }}>
           <div style={{ height: '46%', flex: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ position: 'relative', width: 194, height: 262, flex: 'none' }}>
               <div style={{ position: 'absolute', inset: 0, background: '#3a3835', borderRadius: 6, transform: 'rotate(-9deg) translateY(6px)' }} />
@@ -659,7 +659,7 @@ export default function App() {
 
 function OverlayHead({ title, onClose }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 22px 16px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'calc(env(safe-area-inset-top) + 24px) 22px 16px' }}>
       <div style={{ font: '500 10px var(--font-mono), monospace', letterSpacing: '.16em', color: 'rgba(232,230,225,.5)' }}>{title}</div>
       <button onClick={onClose} style={{ font: '400 18px var(--font-mono), monospace', padding: '0 4px' }}>✕</button>
     </div>
