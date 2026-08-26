@@ -8,6 +8,7 @@
 
 import { kv } from '@vercel/kv';
 import { NextResponse } from 'next/server';
+import { listFeedback } from '@/lib/feedbackKv';
 
 const MAX_LEN = 500;
 const LIST_LIMIT = 200;
@@ -54,21 +55,8 @@ export async function POST(request) {
 
 export async function GET() {
   try {
-    const ids = await kv.lrange('tralala:feedback:ids', 0, LIST_LIMIT - 1);
-    const items = await Promise.all(
-      (ids || []).map(async (id) => {
-        const item = await kv.hgetall(`tralala:feedback:item:${id}`);
-        if (!item || !item.text) return null;
-        return {
-          id: Number(id),
-          text: item.text,
-          ts: Number(item.ts) || 0,
-          up: Number(item.up) || 0,
-          down: Number(item.down) || 0,
-        };
-      })
-    );
-    return NextResponse.json(items.filter(Boolean));
+    const items = await listFeedback(LIST_LIMIT);
+    return NextResponse.json(items);
   } catch {
     return NextResponse.json({ error: 'kv_unavailable' }, { status: 503 });
   }
