@@ -14,11 +14,17 @@ const serif = Instrument_Serif({
   variable: '--font-serif',
 });
 
+const title = 'Tralala.cards — talking cards';
+const description = 'Conversation cards for groups. One question at a time. No account, no setup.';
+
 export const metadata = {
-  title: 'Tralala.cards — talking cards',
-  description: 'Conversation cards for groups. One question at a time. No account, no setup.',
+  metadataBase: new URL('https://tralala.cards'),
+  title,
+  description,
   manifest: '/manifest.json',
   appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: 'Tralala' },
+  openGraph: { title, description, url: '/', siteName: 'Tralala.cards', type: 'website' },
+  twitter: { card: 'summary_large_image', title, description },
 };
 
 export const viewport = {

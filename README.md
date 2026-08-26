@@ -118,7 +118,13 @@ public/manifest.json    PWA
 
 - **Share as an image.** The share screen currently uses the Web Share API with text.
   For the card as a picture, render the same layout through `@vercel/og`.
-- **PWA icons.** `public/icon-192.png` and `icon-512.png` are referenced by the
-  manifest and need to be added.
 - **Lithuanian proofing.** The translations are a first pass — have a native speaker
   review, especially Spicy and Couples.
+
+## Icons & social preview image
+
+`app/icon.png`, `app/apple-icon.png`, `app/opengraph-image.png`, and
+`public/icon-192.png` / `icon-512.png` are generated (not hand-drawn) — run
+`node scripts/generate-icons.mjs` to regenerate them if the brand colors or
+wordmark ever change. Uses the same Instrument Serif font as the app itself
+(font files live in `scripts/assets/`, fetched from Google's font repo).
