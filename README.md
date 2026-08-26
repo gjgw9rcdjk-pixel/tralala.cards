@@ -40,7 +40,7 @@ per device per day) and see + upvote/downvote what others wrote. It uses the
 same KV store as ratings, so it works automatically once that's set up —
 nothing extra to configure. Submissions are public to anyone using the app;
 there's no moderation beyond the daily limit, so remove anything inappropriate
-directly from the KV store in the Vercel dashboard if it ever comes up.
+via the `/moderate` page below.
 
 ### Feedback export
 
@@ -54,6 +54,15 @@ private link instead:
    every submission as JSON. Keep that URL private — it's the only thing
    protecting the data. Leaving `FEEDBACK_EXPORT_KEY` unset disables the
    endpoint (it 404s).
+
+### Moderation
+
+To delete a submission (spam, something inappropriate), visit
+`https://<your-site>/moderate?key=<your FEEDBACK_EXPORT_KEY>` — same key as
+export, no separate setup. It lists every submission with a DELETE button
+next to each. The page isn't linked from anywhere in the app and is marked
+`noindex`, but the URL itself (with the key in it) is the only thing gating
+it, so keep it private like the export link.
 
 ## Deploy to Vercel
 
