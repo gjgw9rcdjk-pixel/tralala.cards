@@ -25,6 +25,7 @@ export const metadata = {
   appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: 'Tralala' },
   openGraph: { title, description, url: '/', siteName: 'Tralala.cards', type: 'website' },
   twitter: { card: 'summary_large_image', title, description },
+  verification: { google: 'kUKuJomOeUDd9yK4jT4OcO8cornnFeRvbjpybkz-Qt4' },
 };
 
 export const viewport = {
