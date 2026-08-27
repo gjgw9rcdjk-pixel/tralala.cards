@@ -455,10 +455,10 @@ export default function App() {
                   gap: 14,
                 }}
               >
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <h1 style={{ margin: 0, fontWeight: 400, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                   <span className="serif" style={{ fontSize: 58, lineHeight: 1, color: cardInk, letterSpacing: '-.02em' }}>Tra<span style={{ fontStyle: 'italic' }}>lala</span></span>
                   <span className="serif" style={{ fontSize: 32, lineHeight: 1, color: cardInk, letterSpacing: '-.02em' }}>cards</span>
-                </div>
+                </h1>
                 <div style={{ ...mono(8, 500, '.18em'), color: cardFaint }}>{ui.deckMeta}</div>
               </div>
             </div>

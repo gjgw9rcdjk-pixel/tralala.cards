@@ -14,8 +14,8 @@ const serif = Instrument_Serif({
   variable: '--font-serif',
 });
 
-const title = 'Tralala.cards — talking cards';
-const description = 'Conversation cards for groups. One question at a time. No account, no setup.';
+const title = 'Conversation Cards for Friends, Couples & Teams | Tralala';
+const description = 'Conversation cards, icebreaker questions and conversation starters for friends, couples, parties and teams. Free to play, no account or setup required.';
 
 export const metadata = {
   metadataBase: new URL('https://tralala.cards'),
