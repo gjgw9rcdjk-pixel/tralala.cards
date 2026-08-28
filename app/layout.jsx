@@ -1,4 +1,5 @@
 import { IBM_Plex_Mono, Instrument_Serif } from 'next/font/google';
+import { Analytics } from '@vercel/analytics/react';
 import './globals.css';
 
 const mono = IBM_Plex_Mono({
@@ -39,7 +40,10 @@ export const viewport = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${mono.variable} ${serif.variable}`}>
-      <body>{children}</body>
+      <body>
+        {children}
+        <Analytics />
+      </body>
     </html>
   );
 }
