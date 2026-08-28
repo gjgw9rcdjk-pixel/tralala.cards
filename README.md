@@ -93,6 +93,18 @@ Same private-link pattern as the feedback export, and the same
    category filter left on "All" versus narrowed to one or a few categories.
 3. Leaving `FEEDBACK_EXPORT_KEY` unset disables this endpoint too (404s).
 
+### Insights dashboard
+
+`https://<your-site>/insights?key=<your FEEDBACK_EXPORT_KEY>` is a private,
+unlisted (not linked from anywhere in the app, `noindex`) page that reads
+`/api/analytics` and `/api/stats` and renders them — sessions over time,
+new vs. returning, languages, categories (overall or filtered to one
+language), and question leaderboards (most seen, most loved, rarely loved).
+The 7D / 30D / 90D / MAX chips re-fetch `/api/analytics` for that window; the
+language chips just re-slice the single response already in hand. Like/down
+percentages are always all-time (that data doesn't live in `/api/analytics`)
+and only count questions with 3+ votes.
+
 ## Deploy to Vercel
 
 1. Push this folder to a new GitHub repository.
