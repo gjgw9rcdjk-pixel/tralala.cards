@@ -157,7 +157,7 @@ export default function App() {
         );
         busy.current = false;
       });
-      track('cards_viewed', { pos: nextPos });
+      track('cards_viewed', { question: order[nextPos], lang, allMode: allSelected });
     };
   };
 
@@ -242,7 +242,7 @@ export default function App() {
       try { await navigator.share({ text: body }); } catch {}
     }
     setShareDone('done');
-    track('share_open', { question: shareIdx });
+    track('share_open', { question: shareIdx, lang });
   };
 
   const doCopy = async () => {
@@ -496,7 +496,7 @@ export default function App() {
           </div>
 
           <button
-            onClick={() => { setView('deck'); track('session_start'); }}
+            onClick={() => { setView('deck'); track('session_start', { lang }); }}
             style={{ marginTop: 22, flex: 'none', background: INK, color: SCREEN, textAlign: 'center', padding: 19, borderRadius: 100, ...mono(11, 600, '.2em') }}
           >
             {ui.start}
