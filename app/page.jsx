@@ -312,6 +312,7 @@ export default function App() {
   );
 
   return (
+    <div className="frame-shell">
     <main
       className="app-frame"
       style={{
@@ -668,6 +669,7 @@ export default function App() {
         </div>
       )}
     </main>
+    </div>
   );
 }
 

@@ -15,6 +15,12 @@ html, body {
 
 body {
   touch-action: manipulation;
+}
+
+/* Scoped to the card-game page only (see .app-frame below) — deliberately
+   not applied to body/html so other routes (e.g. /insights, /moderate)
+   keep their own plain block layout untouched. */
+.frame-shell {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -22,7 +28,7 @@ body {
 }
 
 @media (min-width: 700px) {
-  body {
+  .frame-shell {
     padding: 40px 20px;
     background:
       radial-gradient(ellipse 80% 60% at 50% 30%, rgba(60, 56, 50, .55), transparent 60%),
