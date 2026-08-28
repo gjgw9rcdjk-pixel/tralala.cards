@@ -64,6 +64,35 @@ next to each. The page isn't linked from anywhere in the app and is marked
 `noindex`, but the URL itself (with the key in it) is the only thing gating
 it, so keep it private like the export link.
 
+## Analytics
+
+The app also tracks anonymous, aggregate-only product events — session
+starts, cards viewed (with question, category, language, and whether the
+category filter was left on "All" or narrowed), and shares — using the same
+device id and the same KV store as ratings and feedback. No personal data,
+no third-party analytics vendor; see `lib/analytics.js` (`track()`) for the
+client side and `app/api/track/route.js` for how each event turns into a few
+`HINCRBY`s. Every counter is day-bucketed (one hash per metric, fields shaped
+like `"2026-08-28|fun"`), so a reader can sum any trailing window instead of
+only ever seeing an all-time total.
+
+### Analytics export
+
+Same private-link pattern as the feedback export, and the same
+`FEEDBACK_EXPORT_KEY` gates it:
+
+1. Visit `https://<your-site>/api/analytics?key=<your FEEDBACK_EXPORT_KEY>`
+   for everything since launch, or add `&range=7` / `&range=30` / `&range=90`
+   to scope sessions, views, and shares to that many trailing days (the
+   sessions-per-day breakdown always comes back in full either way, so a
+   caller can chart the whole history and still get lockstep totals for
+   whatever window it's showing).
+2. The response includes `views.byCategoryByLang` — card views broken down
+   by category *within* each language (e.g. "what's popular among English
+   players") — and `views.byFilterMode` — how often people browse with the
+   category filter left on "All" versus narrowed to one or a few categories.
+3. Leaving `FEEDBACK_EXPORT_KEY` unset disables this endpoint too (404s).
+
 ## Deploy to Vercel
 
 1. Push this folder to a new GitHub repository.
@@ -100,12 +129,14 @@ Change interface wording — edit `UI.en` / `UI.lt`.
 ```
 app/layout.jsx          fonts, metadata, PWA manifest link
 app/page.jsx            the whole app: home, deck, favourites, most loved, share, feedback
-app/api/rate/route.js   POST one up/down vote, returns the question's updated tally
-app/api/stats/route.js  GET aggregate tallies for every voted-on question
+app/api/rate/route.js       POST one up/down vote, returns the question's updated tally
+app/api/stats/route.js      GET aggregate tallies for every voted-on question
+app/api/track/route.js      POST one anonymous product event (session/view/share)
+app/api/analytics/route.js  GET the aggregated event counters (see Analytics below)
 app/globals.css         resets and font variables — all other styling is inline
 lib/content.js          ← all content
 lib/deck.js             shuffle and deck-building
-lib/analytics.js        anonymous device id, rating/stats fetch helpers, event tracking (stubbed)
+lib/analytics.js        anonymous device id, rating/stats fetch helpers, event tracking
 public/manifest.json    PWA
 ```
 
