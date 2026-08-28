@@ -161,6 +161,20 @@ export default function App() {
     };
   };
 
+  // Desktop keyboard nav: arrow keys advance the deck, matching the tap/swipe
+  // gesture. Only active on the deck view so it doesn't fight typing in the
+  // feedback textarea or scrolling other overlays.
+  useEffect(() => {
+    if (view !== 'deck') return undefined;
+    const onKeyDown = (e) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === 'ArrowRight') { e.preventDefault(); advance(1); }
+      else if (e.key === 'ArrowLeft') { e.preventDefault(); advance(-1); }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [view, advance]);
+
   const rate = (kind) => {
     const nextKind = ratings[idx] === kind ? null : kind;
     setRatings((r) => {
@@ -264,7 +278,7 @@ export default function App() {
   );
 
   const overlay = {
-    position: 'fixed',
+    position: 'absolute',
     inset: 0,
     background: SCREEN,
     zIndex: 70,
@@ -299,11 +313,10 @@ export default function App() {
 
   return (
     <main
+      className="app-frame"
       style={{
-        height: '100dvh',
         display: 'flex',
         flexDirection: 'column',
-        background: SCREEN,
         overflow: 'hidden',
         paddingTop: 'env(safe-area-inset-top)',
         paddingBottom: 'env(safe-area-inset-bottom)',
@@ -426,17 +439,17 @@ export default function App() {
 
       {/* ── controls ───────────────────────────────────────── */}
       <div style={{ flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 24px 30px' }}>
-        <button onClick={() => advance(-1)} style={navBtn}>←</button>
+        <button onClick={() => advance(-1)} aria-label={ui.ariaPrev} style={navBtn}>←</button>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button onClick={() => rate('down')} style={rateBtn(rating === 'down')}>✕</button>
-          <button onClick={() => rate('like')} style={rateBtn(rating === 'like')}>♥</button>
+          <button onClick={() => rate('down')} aria-label={ui.ariaDislike} aria-pressed={rating === 'down'} style={rateBtn(rating === 'down')}>✕</button>
+          <button onClick={() => rate('like')} aria-label={ui.ariaLike} aria-pressed={rating === 'like'} style={rateBtn(rating === 'like')}>♥</button>
         </div>
-        <button onClick={() => advance(1)} style={navBtn}>→</button>
+        <button onClick={() => advance(1)} aria-label={ui.ariaNext} style={navBtn}>→</button>
       </div>
 
       {/* ── home ───────────────────────────────────────────── */}
       {view === 'intro' && (
-        <div style={{ ...overlay, zIndex: 80, padding: 'calc(env(safe-area-inset-top) + 30px) 30px 34px' }}>
+        <div style={{ ...overlay, zIndex: 80, padding: 'calc(env(safe-area-inset-top) + 30px) 30px 34px', overflowY: 'auto' }}>
           <div style={{ height: '46%', flex: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ position: 'relative', width: 194, height: 262, flex: 'none' }}>
               <div style={{ position: 'absolute', inset: 0, background: '#3a3835', borderRadius: 6, transform: 'rotate(-9deg) translateY(6px)' }} />
@@ -508,7 +521,7 @@ export default function App() {
       {/* ── favourites ─────────────────────────────────────── */}
       {view === 'favs' && (
         <div style={overlay}>
-          <OverlayHead title={`${ui.favTitle}${favIds.length ? `  ${favIds.length}` : ''}`} onClose={() => setView('deck')} />
+          <OverlayHead title={`${ui.favTitle}${favIds.length ? `  ${favIds.length}` : ''}`} onClose={() => setView('deck')} closeLabel={ui.ariaClose} />
           <div style={{ flex: 1, overflow: 'auto', padding: '0 22px 60px' }}>
             {favIds.length === 0 && (
               <p style={{ font: '400 12px/1.7 var(--font-mono), monospace', color: 'rgba(232,230,225,.35)', paddingTop: 10 }}>
@@ -526,6 +539,7 @@ export default function App() {
                     <span style={{ ...mono(9, 500, '.16em'), color: 'rgba(232,230,225,.35)' }}>{label(c)}  ♥</span>
                     <button
                       onClick={() => { setShareIdx(i); setShareDone(''); setCopyDone(''); setView('share'); }}
+                      aria-label={ui.ariaShare}
                       style={{ width: 34, height: 34, borderRadius: 100, ...mono(15, 400, '0'), color: 'rgba(232,230,225,.45)' }}
                     >
                       ↗
@@ -542,7 +556,7 @@ export default function App() {
       {/* ── most loved ─────────────────────────────────────── */}
       {view === 'stats' && (
         <div style={overlay}>
-          <OverlayHead title={ui.statsTitle} onClose={() => setView('deck')} />
+          <OverlayHead title={ui.statsTitle} onClose={() => setView('deck')} closeLabel={ui.ariaClose} />
           <div style={{ flex: 1, overflow: 'auto', padding: '0 22px 60px' }}>
             <p style={{ font: '400 11px/1.6 var(--font-mono), monospace', color: 'rgba(232,230,225,.4)', paddingBottom: 22, margin: 0 }}>{ui.statsNote}</p>
             {stats.map(({ row, i, percent, count }) => (
@@ -563,7 +577,7 @@ export default function App() {
       {/* ── share ──────────────────────────────────────────── */}
       {view === 'share' && shareRow && (
         <div style={{ ...overlay, zIndex: 75 }}>
-          <OverlayHead title={ui.shareTitle} onClose={() => setView('favs')} />
+          <OverlayHead title={ui.shareTitle} onClose={() => setView('favs')} closeLabel={ui.ariaClose} />
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '0 26px' }}>
             <div style={{ width: '100%', aspectRatio: '4 / 5', background: cardBg, borderRadius: 6, padding: '26px 24px', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 60px rgba(0,0,0,.5)' }}>
               <div style={{ ...mono(9, 500, '.16em'), color: cardMuted }}>{label(shareCat)}</div>
@@ -593,7 +607,7 @@ export default function App() {
       {/* ── feedback ───────────────────────────────────────── */}
       {view === 'feedback' && (
         <div style={overlay}>
-          <OverlayHead title={ui.sayTitle} onClose={() => setView('deck')} />
+          <OverlayHead title={ui.sayTitle} onClose={() => setView('deck')} closeLabel={ui.ariaClose} />
           <div style={{ flex: 1, overflow: 'auto', padding: '0 22px 46px', display: 'flex', flexDirection: 'column' }}>
             {sent ? (
               <div className="serif" style={{ fontSize: 30, lineHeight: 1.2, paddingTop: 8 }}>{ui.thanks}</div>
@@ -636,9 +650,9 @@ export default function App() {
             {board.map((item) => (
               <div key={item.id} style={{ padding: '16px 0', borderTop: '1px solid rgba(232,230,225,.12)', display: 'flex', alignItems: 'flex-start', gap: 14 }}>
                 <div style={{ flex: 'none', width: 26, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-                  <button onClick={() => voteBoardItem(item.id, 'up')} style={voteArrowBtn(myFeedbackVotes[item.id] === 'up')}>▲</button>
+                  <button onClick={() => voteBoardItem(item.id, 'up')} aria-label={ui.ariaVoteUp} aria-pressed={myFeedbackVotes[item.id] === 'up'} style={voteArrowBtn(myFeedbackVotes[item.id] === 'up')}>▲</button>
                   <span style={{ ...mono(11, 600, '0'), color: 'rgba(232,230,225,.5)' }}>{item.up - item.down}</span>
-                  <button onClick={() => voteBoardItem(item.id, 'down')} style={voteArrowBtn(myFeedbackVotes[item.id] === 'down')}>▼</button>
+                  <button onClick={() => voteBoardItem(item.id, 'down')} aria-label={ui.ariaVoteDown} aria-pressed={myFeedbackVotes[item.id] === 'down'} style={voteArrowBtn(myFeedbackVotes[item.id] === 'down')}>▼</button>
                 </div>
                 <div style={{ flex: 1, paddingTop: 2 }}>
                   {boardIsSeed && (
@@ -657,11 +671,11 @@ export default function App() {
   );
 }
 
-function OverlayHead({ title, onClose }) {
+function OverlayHead({ title, onClose, closeLabel }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'calc(env(safe-area-inset-top) + 24px) 22px 16px' }}>
       <div style={{ font: '500 10px var(--font-mono), monospace', letterSpacing: '.16em', color: 'rgba(232,230,225,.5)' }}>{title}</div>
-      <button onClick={onClose} style={{ font: '400 18px var(--font-mono), monospace', padding: '0 4px' }}>✕</button>
+      <button onClick={onClose} aria-label={closeLabel} style={{ font: '400 18px var(--font-mono), monospace', padding: '0 4px' }}>✕</button>
     </div>
   );
 }
