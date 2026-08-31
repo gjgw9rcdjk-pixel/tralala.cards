@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CATEGORIES, QUESTIONS, CORE, OPT_IN, TINTS, STRINGS, SURFACE_OPTIONS, LANGUAGES, SEED_FEEDBACK } from '@/lib/content';
+import { CATEGORIES, QUESTIONS, QUESTION_BY_ID, CORE, OPT_IN, TINTS, STRINGS, SURFACE_OPTIONS, LANGUAGES, SEED_FEEDBACK } from '@/lib/content';
 import { buildOrder, shuffle } from '@/lib/deck';
 import { savedLang, saveLang, track, rateQuestion, fetchStats, submitFeedback, fetchFeedback, voteFeedback } from '@/lib/analytics';
 
@@ -104,6 +104,7 @@ export default function CardGame({ initialLang = 'en' }) {
 
   const idx = order[pos] ?? 0;
   const q = QUESTIONS[idx];
+  const qid = q[1];
   const cat = CATEGORIES.find((c) => c.id === q[0]);
   const peekPos = Math.min(pos + 1, order.length - 1);
   const pq = QUESTIONS[order[peekPos] ?? 0];
@@ -117,7 +118,8 @@ export default function CardGame({ initialLang = 'en' }) {
   const cardFaint = onDark ? 'rgba(236,233,226,.3)' : 'rgba(19,19,22,.32)';
 
   const label = (c) => `${c.icon}  ${c.names[L].toUpperCase()}`;
-  const text = (row) => row[1][L];
+  const text = (row) => row[2][L];
+  const idOf = (row) => row[1];
 
   const allSelected = sel.length === CORE.length && sel.every((id) => CORE.includes(id));
 
@@ -179,7 +181,7 @@ export default function CardGame({ initialLang = 'en' }) {
         );
         busy.current = false;
       });
-      track('cards_viewed', { question: order[nextPos], lang, allMode: allSelected });
+      track('cards_viewed', { question: idOf(QUESTIONS[order[nextPos]]), lang, allMode: allSelected });
     };
   };
 
@@ -198,16 +200,16 @@ export default function CardGame({ initialLang = 'en' }) {
   }, [view, advance]);
 
   const rate = (kind) => {
-    const nextKind = ratings[idx] === kind ? null : kind;
+    const nextKind = ratings[qid] === kind ? null : kind;
     setRatings((r) => {
       const n = { ...r };
-      if (nextKind === null) delete n[idx];
-      else n[idx] = nextKind;
+      if (nextKind === null) delete n[qid];
+      else n[qid] = nextKind;
       return n;
     });
-    track('rate', { question: idx, kind });
-    rateQuestion(idx, nextKind).then((res) => {
-      if (res) setLiveStats((s) => ({ ...s, [idx]: res }));
+    track('rate', { question: qid, kind });
+    rateQuestion(qid, nextKind).then((res) => {
+      if (res) setLiveStats((s) => ({ ...s, [qid]: res }));
     });
   };
 
@@ -263,13 +265,13 @@ export default function CardGame({ initialLang = 'en' }) {
     });
   };
 
-  const rating = ratings[idx] || null;
+  const rating = ratings[qid] || null;
   const favIds = useMemo(
-    () => Object.keys(ratings).filter((i) => ratings[i] !== 'down').map(Number),
+    () => Object.keys(ratings).filter((id) => ratings[id] !== 'down'),
     [ratings]
   );
 
-  const shareRow = shareIdx != null ? QUESTIONS[shareIdx] : null;
+  const shareRow = shareIdx != null ? QUESTION_BY_ID.get(shareIdx) : null;
   const shareCat = shareRow ? CATEGORIES.find((c) => c.id === shareRow[0]) : null;
 
   const doShare = async () => {
@@ -288,12 +290,15 @@ export default function CardGame({ initialLang = 'en' }) {
 
   const stats = useMemo(
     () =>
-      QUESTIONS.map((row, i) => ({
-        row,
-        i,
-        percent: liveStats[i]?.percent ?? row[2],
-        count: (liveStats[i]?.like ?? 0) + (liveStats[i]?.down ?? 0),
-      }))
+      QUESTIONS.map((row) => {
+        const id = row[1];
+        return {
+          row,
+          id,
+          percent: liveStats[id]?.percent ?? row[3],
+          count: (liveStats[id]?.like ?? 0) + (liveStats[id]?.down ?? 0),
+        };
+      })
         .sort((a, b) => b.percent - a.percent)
         .slice(0, 8),
     [liveStats]
@@ -554,21 +559,22 @@ export default function CardGame({ initialLang = 'en' }) {
                 {ui.favShareHint}
               </p>
             )}
-            {favIds.map((i) => {
-              const c = CATEGORIES.find((x) => x.id === QUESTIONS[i][0]);
+            {favIds.map((id) => {
+              const row = QUESTION_BY_ID.get(id);
+              const c = CATEGORIES.find((x) => x.id === row[0]);
               return (
-                <div key={i} style={{ padding: '22px 0', borderTop: '1px solid rgba(232,230,225,.12)' }}>
+                <div key={id} style={{ padding: '22px 0', borderTop: '1px solid rgba(232,230,225,.12)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14 }}>
                     <span style={{ ...mono(9, 500, '.16em'), color: 'rgba(232,230,225,.35)' }}>{label(c)}  ♥</span>
                     <button
-                      onClick={() => { setShareIdx(i); setShareDone(''); setCopyDone(''); setView('share'); }}
+                      onClick={() => { setShareIdx(id); setShareDone(''); setCopyDone(''); setView('share'); }}
                       aria-label={ui.ariaShare}
                       style={{ width: 34, height: 34, borderRadius: 100, ...mono(15, 400, '0'), color: 'rgba(232,230,225,.45)' }}
                     >
                       ↗
                     </button>
                   </div>
-                  <div className="serif" style={{ marginTop: 10, fontSize: 22, lineHeight: 1.24 }}>{text(QUESTIONS[i])}</div>
+                  <div className="serif" style={{ marginTop: 10, fontSize: 22, lineHeight: 1.24 }}>{text(row)}</div>
                 </div>
               );
             })}
@@ -582,8 +588,8 @@ export default function CardGame({ initialLang = 'en' }) {
           <OverlayHead title={ui.statsTitle} onClose={() => setView('deck')} closeLabel={ui.ariaClose} />
           <div style={{ flex: 1, overflow: 'auto', padding: '0 22px 60px' }}>
             <p style={{ font: '400 11px/1.6 var(--font-mono), monospace', color: 'rgba(232,230,225,.4)', paddingBottom: 22, margin: 0 }}>{ui.statsNote}</p>
-            {stats.map(({ row, i, percent, count }) => (
-              <div key={i} style={{ padding: '18px 0', borderTop: '1px solid rgba(232,230,225,.12)' }}>
+            {stats.map(({ row, id, percent, count }) => (
+              <div key={id} style={{ padding: '18px 0', borderTop: '1px solid rgba(232,230,225,.12)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 16 }}>
                   <div className="serif" style={{ fontSize: 19, lineHeight: 1.26 }}>{text(row)}</div>
                   <div style={{ ...mono(11, 500, '0'), flex: 'none' }}>{count ? `${percent}% (${count})` : ui.noVotes}</div>

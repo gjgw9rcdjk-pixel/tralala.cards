@@ -7,7 +7,7 @@
 // See README "Analytics".
 
 import { useEffect, useMemo, useState } from 'react';
-import { QUESTIONS, CATEGORIES, LANGUAGES } from '@/lib/content';
+import { QUESTION_BY_ID, CATEGORIES, LANGUAGES } from '@/lib/content';
 
 const CAT_COLOR = {
   future: '#407aea', deep: '#8a63de', couples: '#b950b2', spicy: '#d3456c',
@@ -127,7 +127,7 @@ export default function InsightsPage() {
   const mostSeen = useMemo(() => {
     if (!data) return [];
     return Object.entries(data.views?.byQuestion || {})
-      .map(([qid, count]) => ({ qid: Number(qid), count }))
+      .map(([qid, count]) => ({ qid, count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 6);
   }, [data]);
@@ -135,7 +135,7 @@ export default function InsightsPage() {
   const votedQuestions = useMemo(() => {
     if (!stats) return [];
     return Object.entries(stats)
-      .map(([qid, s]) => ({ qid: Number(qid), ...s, total: (s.like || 0) + (s.down || 0) }))
+      .map(([qid, s]) => ({ qid, ...s, total: (s.like || 0) + (s.down || 0) }))
       .filter((q) => q.total >= MIN_VOTES && q.percent != null);
   }, [stats]);
   const mostLoved = useMemo(() => [...votedQuestions].sort((a, b) => b.percent - a.percent).slice(0, 6), [votedQuestions]);
@@ -150,8 +150,8 @@ export default function InsightsPage() {
   }, [data, range]);
   const chartMax = Math.max(1, ...chartDays.map((d) => d.count));
 
-  const questionText = (qid) => QUESTIONS[qid]?.[1]?.en || '(deleted question)';
-  const questionCat = (qid) => CATEGORIES.find((c) => c.id === QUESTIONS[qid]?.[0]);
+  const questionText = (qid) => QUESTION_BY_ID.get(qid)?.[2]?.en || '(deleted question)';
+  const questionCat = (qid) => CATEGORIES.find((c) => c.id === QUESTION_BY_ID.get(qid)?.[0]);
 
   return (
     <main style={S.page}>

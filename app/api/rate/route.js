@@ -1,13 +1,14 @@
 // Records one anonymous vote for a question and returns its updated tally.
 // `kind` matches the client's rating values: 'like' (heart) or 'down' (✕), or
 // null to un-vote (see the rate() toggle in app/page.jsx).
-// Storage: two Redis hashes (tralala:like, tralala:down) keyed by question
-// index, plus one hash per device (tralala:voter:<device>) so a device's
-// previous vote can be un-counted before the new one is applied.
+// Storage: two Redis hashes (tralala:like, tralala:down) keyed by the
+// question's stable id (see lib/content.js), plus one hash per device
+// (tralala:voter:<device>) so a device's previous vote can be un-counted
+// before the new one is applied.
 
 import { kv } from '@vercel/kv';
 import { NextResponse } from 'next/server';
-import { QUESTIONS } from '@/lib/content';
+import { QUESTION_BY_ID } from '@/lib/content';
 
 function toStats(id, like, down) {
   const l = Number(like) || 0;
@@ -25,7 +26,7 @@ export async function POST(request) {
   }
 
   const { id, kind, device } = body || {};
-  if (!Number.isInteger(id) || id < 0 || id >= QUESTIONS.length) {
+  if (typeof id !== 'string' || !QUESTION_BY_ID.has(id)) {
     return NextResponse.json({ error: 'invalid_id' }, { status: 400 });
   }
   if (kind !== 'like' && kind !== 'down' && kind !== null) {
