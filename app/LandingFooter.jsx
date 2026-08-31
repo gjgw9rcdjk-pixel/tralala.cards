@@ -13,6 +13,8 @@ export default function LandingFooter({ lang: initialLang = 'en' }) {
         {t.footer1}
         <br />
         {t.footer2}
+        <br />
+        {t.footer3}
       </div>
     </footer>
   );

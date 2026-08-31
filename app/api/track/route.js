@@ -12,7 +12,7 @@
 
 import { kv } from '@vercel/kv';
 import { NextResponse } from 'next/server';
-import { QUESTIONS, LANGUAGES } from '@/lib/content';
+import { QUESTION_BY_ID, LANGUAGES } from '@/lib/content';
 
 const LANG_CODES = new Set(LANGUAGES.map((l) => l.code));
 
@@ -47,9 +47,10 @@ export async function POST(request) {
       const [added] = await Promise.all(ops);
       await kv.hincrby('tralala:analytics:sessions:bykindday', `${day}|${added ? 'new' : 'returning'}`, 1);
     } else if (event === 'cards_viewed') {
-      const qid = Number(p.question);
-      if (Number.isInteger(qid) && qid >= 0 && qid < QUESTIONS.length) {
-        const category = QUESTIONS[qid][0];
+      const qid = p.question;
+      const row = typeof qid === 'string' ? QUESTION_BY_ID.get(qid) : null;
+      if (row) {
+        const category = row[0];
         const ops = [
           kv.hincrby('tralala:analytics:views:byquestionday', `${day}|${qid}`, 1),
           kv.hincrby('tralala:analytics:views:bycategoryday', `${day}|${category}`, 1),
@@ -59,9 +60,10 @@ export async function POST(request) {
         await Promise.all(ops);
       }
     } else if (event === 'share_open') {
-      const qid = Number(p.question);
-      if (Number.isInteger(qid) && qid >= 0 && qid < QUESTIONS.length) {
-        const category = QUESTIONS[qid][0];
+      const qid = p.question;
+      const row = typeof qid === 'string' ? QUESTION_BY_ID.get(qid) : null;
+      if (row) {
+        const category = row[0];
         await Promise.all([
           kv.hincrby('tralala:analytics:shares:byquestionday', `${day}|${qid}`, 1),
           kv.hincrby('tralala:analytics:shares:bycategoryday', `${day}|${category}`, 1),
