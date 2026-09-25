@@ -1,4 +1,4 @@
-import CardGame from './CardGame';
+import Game from './game/Game';
 import LandingContent from './LandingContent';
 import LandingFooter from './LandingFooter';
 
@@ -9,7 +9,7 @@ export default function HomeBody({ lang }) {
     <>
       <main>
         <section id="play" className="land-play">
-          <CardGame initialLang={lang} />
+          <Game initialLang={lang} />
         </section>
 
         <LandingContent lang={lang} />

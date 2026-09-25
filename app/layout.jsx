@@ -1,4 +1,4 @@
-import { IBM_Plex_Mono, Instrument_Serif } from 'next/font/google';
+import { Archivo, IBM_Plex_Mono, Instrument_Serif, Plus_Jakarta_Sans } from 'next/font/google';
 import { Analytics } from '@vercel/analytics/react';
 import { SITE_TITLE, SITE_DESCRIPTION } from '@/lib/seo';
 import './globals.css';
@@ -14,6 +14,21 @@ const serif = Instrument_Serif({
   weight: ['400'],
   style: ['normal', 'italic'],
   variable: '--font-serif',
+});
+
+// "Game night" redesign fonts (app/game). Only exposed as CSS variables,
+// so nothing changes for routes that don't use them.
+const archivo = Archivo({
+  subsets: ['latin', 'latin-ext'],
+  weight: ['800'],
+  style: ['normal', 'italic'],
+  variable: '--font-archivo',
+});
+
+const jakarta = Plus_Jakarta_Sans({
+  subsets: ['latin', 'latin-ext'],
+  weight: ['500', '600', '700', '800'],
+  variable: '--font-jakarta',
 });
 
 const title = SITE_TITLE;
@@ -41,11 +56,11 @@ export const viewport = {
 // routes /lt, /de, /es, /it, /pl) stays statically prerendered — a
 // per-request lang here would force the whole site into dynamic rendering
 // just for this one attribute. The visible text is correctly server-rendered
-// per language regardless (see app/HomeBody.jsx); CardGame.jsx corrects
+// per language regardless (see app/HomeBody.jsx); app/game/Game.jsx corrects
 // document.documentElement.lang client-side within a moment of hydration.
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className={`${mono.variable} ${serif.variable}`}>
+    <html lang="en" className={`${mono.variable} ${serif.variable} ${archivo.variable} ${jakarta.variable}`}>
       <body>
         {children}
         <Analytics />
