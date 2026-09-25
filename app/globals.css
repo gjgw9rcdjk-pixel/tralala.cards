@@ -85,7 +85,18 @@ button:active { filter: brightness(0.9); }
 
 /* ── landing page marketing sections (app/page.jsx) ──────────────────
    Additive only — nothing here touches html/body/a/button/etc., so
-   other routes (/insights, /moderate) are unaffected. */
+   other routes (/insights, /moderate) are unaffected. Styled to match the
+   "game night" redesign in app/game (dot ground, Archivo + Jakarta). */
+
+.land-intro,
+.land-section,
+.land-footer {
+  background-color: #101014;
+  background-image: radial-gradient(rgba(255, 255, 255, .075) 1.3px, transparent 1.3px);
+  background-size: 15px 15px;
+  color: #FFFDF8;
+  font-family: var(--font-jakarta), system-ui, sans-serif;
+}
 
 .land-wrap {
   max-width: 900px;
@@ -96,57 +107,62 @@ button:active { filter: brightness(0.9); }
 .land-narrow { max-width: 680px; }
 
 .land-intro {
-  padding: 64px 0 72px;
+  padding: 72px 0 64px;
   text-align: center;
+  border-top: 1px solid rgba(255, 255, 255, .08);
 }
 
 .land-intro-inner { display: flex; flex-direction: column; align-items: center; }
 
 .land-kicker {
-  font: 600 11px/1 var(--font-mono), monospace;
-  letter-spacing: .28em;
-  color: rgba(232, 230, 225, .58);
+  font: italic 800 24px/1 var(--font-archivo), system-ui, sans-serif;
+  letter-spacing: -.02em;
+  color: #FF4E7D;
   margin-bottom: 22px;
 }
 
 .land-intro-h2 {
   margin: 0;
-  font-family: var(--font-serif), Georgia, serif;
-  font-weight: 400;
-  font-size: clamp(30px, 5vw, 44px);
-  line-height: 1.1;
-  letter-spacing: -.02em;
-  color: #e8e6e1;
+  font: 800 clamp(32px, 6vw, 52px)/1.04 var(--font-archivo), system-ui, sans-serif;
+  letter-spacing: -.03em;
+  color: #FFFDF8;
+  text-wrap: balance;
 }
 
 .land-lede {
-  margin: 22px 0 0;
+  margin: 20px 0 0;
   max-width: 480px;
-  font: 400 16px/1.6 var(--font-mono), monospace;
-  color: rgba(232, 230, 225, .6);
+  font: 500 16px/1.6 var(--font-jakarta), system-ui, sans-serif;
+  color: rgba(255, 255, 255, .6);
 }
 
 .land-cta {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   margin-top: 30px;
-  padding: 18px 34px;
-  border-radius: 100px;
-  background: #e8e6e1;
-  color: #0c0c0d;
-  font: 600 12px/1 var(--font-mono), monospace;
-  letter-spacing: .18em;
+  height: 62px;
+  padding: 0 34px;
+  border-radius: 16px;
+  background: #E01B52;
+  color: #fff;
+  font: 800 15px/1 var(--font-jakarta), system-ui, sans-serif;
+  letter-spacing: .04em;
+  text-transform: uppercase;
   text-decoration: none;
-  transition: transform .15s, filter .15s;
+  transition: transform .12s, background .12s;
 }
 
-.land-cta:hover { filter: brightness(1.1); }
-.land-cta:active { transform: scale(.97); }
+.land-cta:hover { color: #fff; filter: brightness(1.08); }
+.land-cta:active { transform: scale(.98); background: #A81140; }
+.land-cta:focus-visible { outline: 2px solid #FF4E7D; outline-offset: 3px; }
 
 .land-fineprint {
   margin-top: 16px;
-  font: 400 11px/1 var(--font-mono), monospace;
-  letter-spacing: .08em;
-  color: rgba(232, 230, 225, .58);
+  font: 800 11px/1.4 var(--font-jakarta), system-ui, sans-serif;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, .5);
 }
 
 .land-play {
@@ -156,7 +172,7 @@ button:active { filter: brightness(0.9); }
   scroll-margin-top: 0;
 }
 
-/* Once a game is in progress (see the effect in CardGame.jsx), everything
+/* Once a game is in progress (see the effect in app/game/Game.jsx), everything
    below the deck — marketing sections and footer — is hidden so the page
    is just the game. Not applied on first paint (or to crawlers, which never
    trigger the client-side state change), so the marketing content stays
@@ -167,56 +183,65 @@ body[data-playing="true"] .land-footer {
   display: none;
 }
 
-.land-section { padding: 72px 0; }
+.land-section { padding: 64px 0; }
 
 .land-h2 {
-  margin: 0 0 32px;
+  margin: 0 0 28px;
   text-align: center;
-  font-family: var(--font-serif), Georgia, serif;
-  font-weight: 400;
-  font-size: clamp(26px, 4vw, 36px);
-  letter-spacing: -.01em;
-  color: #e8e6e1;
+  font: 800 clamp(28px, 4.5vw, 36px)/1.05 var(--font-archivo), system-ui, sans-serif;
+  letter-spacing: -.03em;
+  color: #FFFDF8;
 }
 
 .land-p {
-  font: 400 15px/1.75 var(--font-mono), monospace;
-  color: rgba(232, 230, 225, .62);
-  margin: 0 0 20px;
+  font: 500 15px/1.7 var(--font-jakarta), system-ui, sans-serif;
+  color: rgba(255, 255, 255, .62);
+  margin: 0 0 18px;
 }
 
 .land-p:last-child { margin-bottom: 0; }
 
 .land-vibe-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 11px;
 }
 
 .land-vibe-card {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 20px 18px;
-  border-radius: 10px;
-  border: 1px solid rgba(232, 230, 225, .12);
+  gap: 4px;
+  min-height: 132px;
+  padding: 15px;
+  border-radius: 18px;
+  background: var(--vibe, rgba(255, 255, 255, .07));
+  color: #131318;
   text-decoration: none;
-  transition: border-color .15s, background .15s;
+  transition: transform .12s, box-shadow .12s;
 }
 
-.land-vibe-card:hover { border-color: rgba(232, 230, 225, .4); background: rgba(232, 230, 225, .04); }
+.land-vibe-card:hover { color: #131318; transform: rotate(-1.4deg); box-shadow: 8px 9px 0 0 rgba(255, 78, 125, .92); }
+.land-vibe-card:focus-visible { outline: 2px solid #FF4E7D; outline-offset: 3px; }
 
-.land-vibe-icon { font-size: 22px; line-height: 1; }
+.land-vibe-card--raised {
+  border: 1px solid rgba(255, 255, 255, .1);
+  color: #FFFDF8;
+}
+.land-vibe-card--raised:hover { color: #FFFDF8; }
+
+.land-vibe-icon {
+  font: 800 22px/1 var(--font-archivo), system-ui, sans-serif;
+  margin-bottom: auto;
+  padding-bottom: 14px;
+}
 
 .land-vibe-name {
-  font: 600 12px/1.3 var(--font-mono), monospace;
-  letter-spacing: .04em;
-  color: #e8e6e1;
+  font: 800 13px/1.3 var(--font-jakarta), system-ui, sans-serif;
 }
 
 .land-vibe-blurb {
-  font: 400 12px/1.5 var(--font-mono), monospace;
-  color: rgba(232, 230, 225, .58);
+  font: 600 11.5px/1.45 var(--font-jakarta), system-ui, sans-serif;
+  opacity: .72;
 }
 
 .land-chip-row {
@@ -226,16 +251,17 @@ body[data-playing="true"] .land-footer {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .land-chip {
-  padding: 10px 20px;
-  border-radius: 100px;
-  border: 1px solid rgba(232, 230, 225, .18);
-  font: 500 12px/1 var(--font-mono), monospace;
+  padding: 9px 15px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .1);
+  font: 800 11.5px/1 var(--font-jakarta), system-ui, sans-serif;
   letter-spacing: .06em;
-  color: rgba(232, 230, 225, .75);
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, .75);
 }
 
 .land-cta-section { text-align: center; }
@@ -243,7 +269,7 @@ body[data-playing="true"] .land-footer {
 .land-footer {
   padding: 40px 0 calc(env(safe-area-inset-bottom) + 40px);
   text-align: center;
-  font: 400 11px/1 var(--font-mono), monospace;
-  letter-spacing: .04em;
-  color: rgba(232, 230, 225, .58);
+  font: 500 12px/1.7 var(--font-jakarta), system-ui, sans-serif;
+  color: rgba(255, 255, 255, .5);
+  border-top: 1px solid rgba(255, 255, 255, .1);
 }

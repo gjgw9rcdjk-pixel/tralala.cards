@@ -4,6 +4,7 @@ import { CATEGORIES } from '@/lib/content';
 import { LANDING } from '@/lib/landingCopy';
 import { useLandingLang } from '@/lib/useLandingLang';
 import { PATH_BY_LANG } from '@/lib/seo';
+import { DECK_STYLE } from '@/lib/gameMeta';
 
 export default function LandingContent({ lang: initialLang = 'en' }) {
   const lang = useLandingLang(initialLang);
@@ -18,7 +19,7 @@ export default function LandingContent({ lang: initialLang = 'en' }) {
     <>
       <section className="land-intro">
         <div className="land-wrap land-intro-inner">
-          <div className="land-kicker">{t.kicker}</div>
+          <div className="land-kicker">Tralala</div>
           <h2 className="land-intro-h2">
             {t.h2Line1}<br />{t.h2Line2}
           </h2>
@@ -33,8 +34,13 @@ export default function LandingContent({ lang: initialLang = 'en' }) {
           <h2 id="vibes-h2" className="land-h2">{t.vibesH2}</h2>
           <div className="land-vibe-grid">
             {CATEGORIES.map((c) => (
-              <a key={c.id} className="land-vibe-card" href={`${vibeBasePath}/?vibe=${c.id}#play`}>
-                <span className="land-vibe-icon" aria-hidden="true">{c.icon}</span>
+              <a
+                key={c.id}
+                className={`land-vibe-card${DECK_STYLE[c.id].color ? '' : ' land-vibe-card--raised'}`}
+                style={DECK_STYLE[c.id].color ? { '--vibe': DECK_STYLE[c.id].color } : undefined}
+                href={`${vibeBasePath}/?vibe=${c.id}#play`}
+              >
+                <span className="land-vibe-icon" aria-hidden="true">{DECK_STYLE[c.id].glyph}</span>
                 <span className="land-vibe-name">{t.vibes[c.id]?.title}</span>
                 <span className="land-vibe-blurb">{t.vibes[c.id]?.blurb}</span>
               </a>

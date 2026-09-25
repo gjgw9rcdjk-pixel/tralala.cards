@@ -2,17 +2,20 @@
 // one per device per day) and browse what others wrote.
 // Storage: an incrementing id (tralala:feedback:seq), a newest-first list of
 // those ids (tralala:feedback:ids), one hash per item
-// (tralala:feedback:item:<id>) holding { text, ts, up, down }, and one
+// (tralala:feedback:item:<id>) holding { text, ts, up, down } plus optional
+// type ('question' | 'idea' | 'bug') and deck (a category id), and one
 // expiring key per device (tralala:feedback-limit:<device>) enforcing the
 // daily limit.
 
 import { kv } from '@vercel/kv';
 import { NextResponse } from 'next/server';
 import { listFeedback } from '@/lib/feedbackKv';
+import { CATEGORIES } from '@/lib/content';
 
 const MAX_LEN = 500;
 const LIST_LIMIT = 200;
 const LIMIT_TTL_SECONDS = 60 * 60 * 24;
+const TYPES = ['question', 'idea', 'bug'];
 
 export async function POST(request) {
   let body;
@@ -22,13 +25,20 @@ export async function POST(request) {
     return NextResponse.json({ error: 'invalid_json' }, { status: 400 });
   }
 
-  const { text, device } = body || {};
+  const { text, device, type, deck } = body || {};
   const trimmed = typeof text === 'string' ? text.trim() : '';
   if (!trimmed || trimmed.length > MAX_LEN) {
     return NextResponse.json({ error: 'invalid_text' }, { status: 400 });
   }
   if (typeof device !== 'string' || device.length < 1 || device.length > 128) {
     return NextResponse.json({ error: 'invalid_device' }, { status: 400 });
+  }
+
+  if (type != null && !TYPES.includes(type)) {
+    return NextResponse.json({ error: 'invalid_type' }, { status: 400 });
+  }
+  if (deck != null && !CATEGORIES.some((c) => c.id === deck)) {
+    return NextResponse.json({ error: 'invalid_deck' }, { status: 400 });
   }
 
   const limitKey = `tralala:feedback-limit:${device}`;
@@ -41,6 +51,8 @@ export async function POST(request) {
 
     const id = await kv.incr('tralala:feedback:seq');
     const item = { text: trimmed, ts: Date.now(), up: 0, down: 0 };
+    if (type) item.type = type;
+    if (deck) item.deck = deck;
     await Promise.all([
       kv.hset(`tralala:feedback:item:${id}`, item),
       kv.lpush('tralala:feedback:ids', String(id)),
