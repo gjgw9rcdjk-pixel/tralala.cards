@@ -207,11 +207,15 @@ button.tl-wordmark { padding: 6px 0; line-height: 1; }
   /* Pink offset with a faint neon halo — kept low so the question stays the focus. */
   box-shadow: 14px 16px 0 0 var(--offset), 14px 16px 18px 0 var(--glow), 0 30px 50px -24px rgba(0, 0, 0, .8);
   touch-action: pan-y;
+  cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
 }
 .tl-card--yellow { --offset: rgba(255, 201, 60, .92); --glow: rgba(255, 201, 60, .18); --label: var(--amber-on-card); }
 .tl-card--green { --offset: rgba(58, 208, 122, .92); --glow: transparent; --label: var(--green-on-card); }
+.tl-flamingo { color: var(--pink-on-card); }
+/* On dark rows the word glows in the wordmark's neon pink. */
+.tl-quote .tl-flamingo, .tl-item:not(.tl-item--hero) .tl-flamingo { color: var(--pink); text-shadow: 0 0 10px rgba(255, 78, 125, .45); }
 .tl-card__label { font: 800 11px var(--body); letter-spacing: .16em; color: var(--label); text-transform: uppercase; }
 .tl-card__q {
   margin: 16px 0 24px;

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { CATEGORIES, QUESTION_BY_ID, CORE } from '@/lib/content';
 import { DECK_STYLE, deckIds } from '@/lib/gameMeta';
 import { GAME_STRINGS, cards, fmt } from '@/lib/gameStrings';
-import { shuffle } from '@/lib/deck';
+import { spreadShuffle } from '@/lib/deck';
 import { track, rateQuestion } from '@/lib/analytics';
 import { PATH_BY_LANG } from '@/lib/seo';
 import {
@@ -26,6 +26,10 @@ const INSTALL_KEY = 'tralala.installDismissed';
 const SPLASH_MS = 2200;
 const UNDO_MS = 4000;
 const SWIPE_COMMIT = 90;
+
+// Random order with categories mixed, so the same kind of card doesn't come
+// up back to back.
+const deal = (ids) => spreadShuffle(ids, (id) => QUESTION_BY_ID.get(id)[0]);
 
 function readJson(key, fallback) {
   try {
@@ -93,14 +97,14 @@ export default function Game({ initialLang = 'en' }) {
       const cat = QUESTION_BY_ID.get(q)[0];
       const sel = CORE.includes(cat) ? [] : [cat];
       setSelected(sel);
-      setOrder([q, ...shuffle(deckIds(sel, sp).filter((id) => id !== q))]);
+      setOrder([q, ...deal(deckIds(sel, sp).filter((id) => id !== q))]);
       setScreen('deck');
     } else if (vibe && CATEGORIES.some((c) => c.id === vibe)) {
       setSelected([vibe]);
-      setOrder(shuffle(deckIds([vibe], sp)));
+      setOrder(deal(deckIds([vibe], sp)));
       setScreen('deck');
     } else {
-      setOrder(shuffle(deckIds([], sp)));
+      setOrder(deal(deckIds([], sp)));
       // First visit: splash, then the three onboarding steps.
       if (!readJson(ONBOARDED_KEY, false)) {
         setScreen('onboarding');
@@ -137,7 +141,7 @@ export default function Game({ initialLang = 'en' }) {
   // ── deck building ─────────────────────────────────────────────────────
   const startDeck = useCallback((sel, sp = spice) => {
     setSelected(sel);
-    setOrder(shuffle(deckIds(sel, sp)));
+    setOrder(deal(deckIds(sel, sp)));
     setPos(0);
     setLoop(0);
     setRound({ played: 0, skipped: 0, starred: 0 });
@@ -202,6 +206,36 @@ export default function Game({ initialLang = 'en' }) {
     if (busy.current) return;
     setLastSkip(null);
     leave(1, pos + 1, () => setRound((r) => ({ ...r, played: r.played + 1 })));
+  };
+
+  // Tapping the card turns it over like a real card; the next question is on
+  // the back. Counts as played, same as Next.
+  const flip = () => {
+    if (busy.current) return;
+    const el = cardRef.current;
+    const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    // Last card goes through `next` so the round ends the usual way.
+    if (pos + 1 >= order.length || !el?.animate || still) { next(); return; }
+    busy.current = true;
+    setLastSkip(null);
+    const turn = (deg) => `perspective(900px) rotateY(${deg}deg) rotate(-1.4deg)`;
+    const half = el.animate(
+      [{ transform: turn(0) }, { transform: turn(-90) }],
+      { duration: 170, easing: 'cubic-bezier(.5,0,.9,.6)', fill: 'forwards' }
+    );
+    half.onfinish = () => {
+      setRound((r) => ({ ...r, played: r.played + 1 }));
+      setPos(pos + 1);
+      requestAnimationFrame(() => {
+        half.cancel();
+        const back = el.animate(
+          [{ transform: turn(90) }, { transform: turn(0) }],
+          { duration: 230, easing: 'cubic-bezier(.1,.4,.5,1)' }
+        );
+        back.onfinish = () => { busy.current = false; };
+        back.oncancel = back.onfinish;
+      });
+    };
   };
 
   const skip = () => {
@@ -279,10 +313,16 @@ export default function Game({ initialLang = 'en' }) {
     }
     if (d.moved) setDragX(dx);
   };
-  const onPointerUp = () => {
+  const onPointerUp = (e) => {
     const d = drag.current;
     drag.current = null;
-    if (!d || !d.moved) return;
+    if (!d) return;
+    if (!d.moved) {
+      // A tap (not a scroll or a cancelled touch) turns the card over.
+      const still = Math.abs(e.clientX - d.x) < 8 && Math.abs(e.clientY - d.y) < 8;
+      if (e.type === 'pointerup' && still) flip();
+      return;
+    }
     if (dragX <= -SWIPE_COMMIT) skip();
     else if (dragX >= SWIPE_COMMIT) next();
     else setDragX(0);

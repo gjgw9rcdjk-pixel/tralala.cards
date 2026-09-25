@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { CATEGORIES, QUESTION_BY_ID } from '@/lib/content';
 import { DECK_STYLE } from '@/lib/gameMeta';
 import { cards, fmt } from '@/lib/gameStrings';
+import { QText } from './parts';
 
 const catOf = (row) => CATEGORIES.find((c) => c.id === row[0]);
 // Deck colour for a label on a dark row; the 18+ deck has no fill colour.
@@ -67,7 +68,7 @@ export function SavedScreen({ s, lang, saved, savedAt, onUnsave, onShare, onStar
             return (
               <div key={row[1]} className={first ? 'tl-item tl-item--hero' : 'tl-item'}>
                 <div className="tl-item__label" style={first ? undefined : { color: labelColor(cat.id) }}>{cat.names[lang]}</div>
-                <p className="tl-item__q" lang={lang}>{row[2][lang]}</p>
+                <p className="tl-item__q" lang={lang}><QText text={row[2][lang]} /></p>
                 <div className="tl-item__foot">
                   {first && at && <span className="tl-badge">{fmt(s.savedOn, { date: dateFmt.format(at).toUpperCase() })}</span>}
                   <button className="tl-item__act tl-item__act--share" onClick={() => onShare(row[1])} aria-label={s.ariaShare}>↗</button>

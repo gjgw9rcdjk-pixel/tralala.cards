@@ -77,6 +77,12 @@ function Toggle({ on, onChange, label }) {
   );
 }
 
+// Question text with *word* marks (the Spicy deck's *flamingo* stand-in)
+// shown as a pink word, without the asterisks.
+export function QText({ text }) {
+  return text.split(/\*([^*]+)\*/).map((part, i) => (i % 2 ? <span key={i} className="tl-flamingo">{part}</span> : part));
+}
+
 // Step the question size down for long text (DE/PL run long).
 export function qSizeClass(text) {
   if (text.length > 110) return 'tl-card__q tl-card__q--s';
@@ -232,7 +238,7 @@ export function QuestionCard({ s, lang, row, filtered, cardRef, dragX, onPointer
       >
         ↗
       </button>
-      <p ref={qRef} className={qSizeClass(text)} lang={lang}>{text}</p>
+      <p ref={qRef} className={qSizeClass(text)} lang={lang}><QText text={text} /></p>
       <div className="tl-card__badges">
         {!filtered && <span className="tl-badge tl-badge--dark">{catName(cat, lang)}</span>}
         {cat.note && <span className="tl-badge">{cat.note}</span>}
@@ -245,6 +251,8 @@ export function QuestionCard({ s, lang, row, filtered, cardRef, dragX, onPointer
 // ── decks picker ────────────────────────────────────────────────────────
 
 function DeckTile({ s, lang, cat, on, count, onToggle, tileRef }) {
+  // The Spicy deck shrinks with the spice level; show how much is left in play.
+  const fullCount = countFor(cat.id, 'nomercy');
   const style = DECK_STYLE[cat.id];
   const raised = !style.color;
   return (
@@ -258,7 +266,7 @@ function DeckTile({ s, lang, cat, on, count, onToggle, tileRef }) {
       {cat.note ? <span className="tl-tag">{s.adultTag}</span> : <span className="tl-tile__glyph" aria-hidden="true">{style.glyph}</span>}
       <span>
         <span className="tl-tile__name">{catName(cat, lang)}</span>
-        <span className="tl-tile__count">{cards(s, count)}</span>
+        <span className="tl-tile__count">{count < fullCount ? fmt(s.cardsOf, { n: count, total: fullCount }) : cards(s, count)}</span>
       </span>
       {on && <span className="tl-tile__check" aria-hidden="true">✓</span>}
     </button>
@@ -373,7 +381,7 @@ function SpicePicker({ s, lang, spice, onSpice }) {
           <button key={lvl} aria-pressed={spice === lvl} onClick={() => onSpice(lvl)}>{s[lvl]}</button>
         ))}
       </div>
-      {example && <div className="tl-quote">“{example[2][lang]}”</div>}
+      {example && <div className="tl-quote">“<QText text={example[2][lang]} />”</div>}
     </div>
   );
 }
