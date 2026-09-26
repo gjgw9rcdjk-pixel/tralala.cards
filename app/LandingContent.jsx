@@ -1,10 +1,23 @@
 'use client';
 
-import { CATEGORIES } from '@/lib/content';
+import { CATEGORIES, QUESTIONS } from '@/lib/content';
 import { LANDING } from '@/lib/landingCopy';
 import { useLandingLang } from '@/lib/useLandingLang';
 import { PATH_BY_LANG } from '@/lib/seo';
-import { DECK_STYLE } from '@/lib/gameMeta';
+import { DECK_STYLE, SPICE_OF } from '@/lib/gameMeta';
+
+// Three real questions per deck for the "sample questions" section. Fixed
+// picks (highest stored like rate, then id) so server and client render the
+// same list. The 18+ deck only shows its mild cards here.
+const SAMPLES = Object.fromEntries(
+  CATEGORIES.map((c) => [
+    c.id,
+    QUESTIONS
+      .filter((q) => q[0] === c.id && (c.id !== 'spicy' || SPICE_OF[q[1]] === 'mild'))
+      .sort((a, b) => (b[3] ?? 0) - (a[3] ?? 0) || a[1].localeCompare(b[1]))
+      .slice(0, 3),
+  ])
+);
 
 export default function LandingContent({ lang: initialLang = 'en' }) {
   const lang = useLandingLang(initialLang);
@@ -21,7 +34,7 @@ export default function LandingContent({ lang: initialLang = 'en' }) {
         <div className="land-wrap land-intro-inner">
           <div className="land-kicker">Tralala</div>
           <h2 className="land-intro-h2">
-            {t.h2Line1}<br />{t.h2Line2}
+            {t.h2Line1} {t.h2Line2}
           </h2>
           <p className="land-lede">{t.lede}</p>
           <a className="land-cta" href="#play">{t.cta}</a>
@@ -58,14 +71,34 @@ export default function LandingContent({ lang: initialLang = 'en' }) {
         </div>
       </section>
 
-      <section className="land-section" aria-labelledby="for-h2">
+      <section className="land-section" aria-labelledby="samples-h2">
         <div className="land-wrap">
-          <h2 id="for-h2" className="land-h2">{t.forH2}</h2>
-          <ul className="land-chip-row">
-            {t.perfectFor.map((label) => (
-              <li key={label} className="land-chip">{label}</li>
+          <h2 id="samples-h2" className="land-h2">{t.samplesH2}</h2>
+          <div className="land-sample-grid">
+            {CATEGORIES.map((c) => (
+              <article key={c.id} className="land-sample">
+                <h3 className="land-sample-title">{t.vibes[c.id]?.title}</h3>
+                <ul className="land-sample-list">
+                  {SAMPLES[c.id].map((q) => <li key={q[1]} lang={lang}>{q[2][lang]}</li>)}
+                </ul>
+                <a className="land-sample-play" href={`${vibeBasePath}/?vibe=${c.id}#play`}>{t.samplesPlay} →</a>
+              </article>
             ))}
-          </ul>
+          </div>
+        </div>
+      </section>
+
+      <section className="land-section" aria-labelledby="faq-h2">
+        <div className="land-wrap land-narrow">
+          <h2 id="faq-h2" className="land-h2">{t.faqH2}</h2>
+          <div className="land-faq">
+            {t.faq.map(([q, a]) => (
+              <div key={q} className="land-faq-item">
+                <h3 className="land-faq-q">{q}</h3>
+                <p className="land-p">{a}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 

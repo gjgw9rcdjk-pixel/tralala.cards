@@ -1,0 +1,25 @@
+# Tralala.cards
+
+> Tralala is a free conversation card game that runs in the browser. One phone shows one question at a time; the group reads it out loud, everyone answers, and the phone gets passed on. No account, no sign-up, no download.
+
+## What it offers
+
+- Hundreds of questions in 10 decks: Fun, Know me (icebreakers), Deep, Team, Spicy (18+), Future, Firsts, Awkward, Couples, Food. Decks can be played one at a time or mixed together.
+- The Spicy deck is for adults only (18+) and has three levels: Mild, Spicy and No mercy.
+- Six languages: English, Lithuanian, German, Spanish, Italian and Polish.
+- Favourite questions can be starred and saved on the device, and any card can be shared as an image or a link.
+- Works on any phone browser and can be added to the home screen like an app.
+- Free to play. Only anonymous usage data is collected; there are no accounts and no personal data.
+
+## Who it is for
+
+Friends, couples and date nights, families, parties, road trips, and work teams looking for icebreakers.
+
+## Pages
+
+- [English](https://tralala.cards/)
+- [Lietuvių](https://tralala.cards/lt)
+- [Deutsch](https://tralala.cards/de)
+- [Español](https://tralala.cards/es)
+- [Italiano](https://tralala.cards/it)
+- [Polski](https://tralala.cards/pl)

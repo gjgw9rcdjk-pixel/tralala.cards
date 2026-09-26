@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { UI_LANGUAGES } from '@/lib/gameMeta';
 import { GAME_STRINGS } from '@/lib/gameStrings';
 import { NeonFlamingo, Sheet } from './parts';
 
@@ -33,14 +32,14 @@ function Dots({ step, s, onSkip }) {
   return (
     <div className="tl-ob-top">
       <span className="tl-dots" aria-hidden="true">
-        {[0, 1, 2].map((i) => <span key={i} data-on={i === step} />)}
+        {[0, 1].map((i) => <span key={i} data-on={i === step} />)}
       </span>
       <button className="tl-ob-skip" onClick={onSkip}>{s.obSkip}</button>
     </div>
   );
 }
 
-export function Onboarding({ lang, onLang, onDone }) {
+export function Onboarding({ lang, onDone }) {
   const [step, setStep] = useState(0);
   const [who, setWho] = useState([]);
   const s = GAME_STRINGS[lang] || GAME_STRINGS.en;
@@ -56,29 +55,6 @@ export function Onboarding({ lang, onLang, onDone }) {
 
       {step === 0 && (
         <>
-          <div className="tl-ob-head">
-            <h2 className="tl-ob-title">{s.obLangTitle}</h2>
-            <div className="tl-sub" style={{ marginTop: 12 }}>{s.obLangSub}</div>
-          </div>
-          <div className="tl-scroll">
-            <div className="tl-grid" style={{ gridAutoRows: 84, gap: 10, paddingTop: 28 }}>
-              {UI_LANGUAGES.map(({ code, name }) => (
-                <button key={code} className="tl-lang-tile" aria-pressed={code === lang} onClick={() => onLang(code)}>
-                  <span>{code.toUpperCase()}</span>
-                  <b>{name}</b>
-                  {code === lang && <span className="tl-tile__check" aria-hidden="true">✓</span>}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="tl-ob-foot">
-            <button className="tl-btn tl-btn--primary" onClick={() => setStep(1)}>{s.obContinue}</button>
-          </div>
-        </>
-      )}
-
-      {step === 1 && (
-        <>
           <div className="tl-ob-example">
             <span className="tl-ob-example__back" />
             <div className="tl-card" style={{ position: 'absolute', left: 0, right: 0, top: 12, height: 224, padding: '24px 22px' }}>
@@ -87,17 +63,18 @@ export function Onboarding({ lang, onLang, onDone }) {
             </div>
           </div>
           <div className="tl-ob-rows">
-            <div><span className="tl-ob-key" style={{ background: 'var(--action)', color: '#fff', fontSize: 10 }}>{s.next}</span>{s.obHowNext}</div>
+            <div><span className="tl-ob-key tl-ob-key--card" aria-hidden="true"><i /></span>{s.obHowTap}</div>
+            <div><span className="tl-ob-key" style={{ background: 'var(--action)', color: 'var(--white)', fontSize: 10 }}>{s.next}</span>{s.obHowNext}</div>
             <div><span className="tl-ob-key" style={{ color: 'var(--yellow)' }}>★</span>{s.obHowStar}</div>
             <div><span className="tl-ob-key">✕</span>{s.obHowSkip}</div>
           </div>
           <div className="tl-ob-foot">
-            <button className="tl-btn tl-btn--primary" onClick={() => setStep(2)}>{s.obGotIt}</button>
+            <button className="tl-btn tl-btn--primary" onClick={() => setStep(1)}>{s.obGotIt}</button>
           </div>
         </>
       )}
 
-      {step === 2 && (
+      {step === 1 && (
         <>
           <div className="tl-ob-head">
             <h2 className="tl-ob-title">{s.obWhoTitle}</h2>

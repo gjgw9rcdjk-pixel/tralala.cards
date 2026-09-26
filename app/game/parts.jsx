@@ -229,7 +229,7 @@ export function QuestionCard({ s, lang, row, filtered, cardRef, dragX, onPointer
         })() : undefined,
       } : tint}
     >
-      <div className="tl-card__label">{filtered ? catName(cat, lang) : s.fullDeck}</div>
+      <div className="tl-card__label">{catName(cat, lang)}</div>
       <button
         className="tl-share-mark"
         onPointerDown={(e) => e.stopPropagation()}
@@ -240,7 +240,6 @@ export function QuestionCard({ s, lang, row, filtered, cardRef, dragX, onPointer
       </button>
       <p ref={qRef} className={qSizeClass(text)} lang={lang}><QText text={text} /></p>
       <div className="tl-card__badges">
-        {!filtered && <span className="tl-badge tl-badge--dark">{catName(cat, lang)}</span>}
         {cat.note && <span className="tl-badge">{cat.note}</span>}
       </div>
       {showSkipped && <span className="tl-card__skipped">{s.skipped}</span>}
