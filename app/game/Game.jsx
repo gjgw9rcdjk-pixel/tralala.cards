@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { CATEGORIES, QUESTION_BY_ID, CORE } from '@/lib/content';
 import { DECK_STYLE, deckIds } from '@/lib/gameMeta';
-import { GAME_STRINGS, cards, fmt } from '@/lib/gameStrings';
+import { GAME_STRINGS, fmt } from '@/lib/gameStrings';
 import { spreadShuffle } from '@/lib/deck';
 import { track, rateQuestion } from '@/lib/analytics';
 import { PATH_BY_LANG } from '@/lib/seo';
@@ -105,9 +105,10 @@ export default function Game({ initialLang = 'en' }) {
       setScreen('deck');
     } else {
       setOrder(deal(deckIds([], sp)));
-      // First visit: splash, then the three onboarding steps.
-      if (!readJson(ONBOARDED_KEY, false)) {
-        setScreen('onboarding');
+      // Launched from the home-screen icon: show the splash, like a native
+      // app. In the browser the page opens straight away (onboarding waits
+      // for START, so visitors and search engines see the home page first).
+      if (window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone === true) {
         setSplash(true);
         setTimeout(() => setSplash(false), SPLASH_MS);
       }
@@ -344,14 +345,11 @@ export default function Game({ initialLang = 'en' }) {
   const finishOnboarding = ({ start: go, decks, audience }) => {
     writeJson(ONBOARDED_KEY, { at: Date.now(), audience });
     track('onboarding_done', { lang, audience: audience.join(','), started: go });
+    // Onboarding only runs after START, so both finishing and skipping
+    // carry on to the deck picker.
     setSelected(decks);
-    if (go) {
-      track('session_start', { lang });
-      setDraft(decks);
-      setScreen('decks');
-    } else {
-      setScreen('home');
-    }
+    setDraft(decks);
+    setScreen('decks');
   };
 
   // Install prompt: only after the first finished round, and only once.
@@ -389,9 +387,11 @@ export default function Game({ initialLang = 'en' }) {
     else setScreen(tab);
   };
   // START on the home screen opens the deck picker; PLAY there deals.
+  // The very first START shows the two onboarding steps first.
   const start = () => {
     track('session_start', { lang });
-    openDecks();
+    if (!readJson(ONBOARDED_KEY, false)) setScreen('onboarding');
+    else openDecks();
   };
 
   const fullCount = deckIds([], spice).length;
@@ -403,7 +403,7 @@ export default function Game({ initialLang = 'en' }) {
   return (
     <div className="tl-shell">
       <div className="tl-app">
-        {screen === 'onboarding' && <Onboarding lang={lang} onLang={chooseLang} onDone={finishOnboarding} />}
+        {screen === 'onboarding' && <Onboarding lang={lang} onDone={finishOnboarding} />}
         {splash && <Splash />}
 
         {screen === 'home' && (
@@ -433,10 +433,10 @@ export default function Game({ initialLang = 'en' }) {
               style={{ color: selected.length === 1 ? DECK_STYLE[selected[0]].color || 'var(--pink)' : 'var(--t2)' }}
             >
               {!filtered
-                ? cards(s, order.length).toUpperCase()
+                ? s.fullDeck
                 : selected.length === 1
-                  ? fmt(s.catMeta, { n: order.length })
-                  : fmt(s.catsMeta, { k: selected.length, n: order.length })}
+                  ? CATEGORIES.find((c) => c.id === selected[0]).names[lang].toUpperCase()
+                  : fmt(s.catsPicked, { k: selected.length })}
             </button>
             {loop > 0 && pos < 2 && <div className="tl-deck-meta" style={{ paddingTop: 4 }}>● {s.startingOver}</div>}
             <div className="tl-card-area">

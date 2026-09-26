@@ -1,15 +1,15 @@
 import HomeBody from '../HomeBody';
 import { buildMetadata, buildJsonLd } from '@/lib/seo';
 
-export const metadata = buildMetadata('lt');
+export const metadata = buildMetadata('en');
 
-const jsonLd = buildJsonLd('lt');
+const jsonLd = buildJsonLd('en');
 
-export default function HomeLt() {
+export default function Home() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <HomeBody lang="lt" />
+      <HomeBody lang="en" />
     </>
   );
 }

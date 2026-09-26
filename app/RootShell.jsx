@@ -34,7 +34,11 @@ const jakarta = Plus_Jakarta_Sans({
 const title = SITE_TITLE;
 const description = SITE_DESCRIPTION;
 
-export const metadata = {
+// Shared by every root layout: each language lives in its own route group
+// ((en), (lt), (de)…) with a tiny layout.jsx that renders <RootShell lang>,
+// so the server HTML carries the right lang attribute while every route
+// stays statically prerendered.
+export const rootMetadata = {
   metadataBase: new URL('https://tralala.cards'),
   title,
   description,
@@ -45,22 +49,16 @@ export const metadata = {
   verification: { google: 'kUKuJomOeUDd9yK4jT4OcO8cornnFeRvbjpybkz-Qt4' },
 };
 
-export const viewport = {
+export const rootViewport = {
   themeColor: '#0c0c0d',
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
 };
 
-// Kept as a static "en" default so every route (including the language
-// routes /lt, /de, /es, /it, /pl) stays statically prerendered — a
-// per-request lang here would force the whole site into dynamic rendering
-// just for this one attribute. The visible text is correctly server-rendered
-// per language regardless (see app/HomeBody.jsx); app/game/Game.jsx corrects
-// document.documentElement.lang client-side within a moment of hydration.
-export default function RootLayout({ children }) {
+export default function RootShell({ lang, children }) {
   return (
-    <html lang="en" className={`${mono.variable} ${serif.variable} ${archivo.variable} ${jakarta.variable}`}>
+    <html lang={lang} className={`${mono.variable} ${serif.variable} ${archivo.variable} ${jakarta.variable}`}>
       <body>
         {children}
         <Analytics />

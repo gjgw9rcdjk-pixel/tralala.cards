@@ -1,4 +1,4 @@
-import HomeBody from '../HomeBody';
+import HomeBody from '../../HomeBody';
 import { buildMetadata, buildJsonLd } from '@/lib/seo';
 
 export const metadata = buildMetadata('de');

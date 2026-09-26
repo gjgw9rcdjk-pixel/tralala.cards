@@ -18,9 +18,19 @@
   --pink-on-card: #C22050;
   --amber-on-card: #8A6200;
   --green-on-card: #1E7A45;
+  --white: #FFFFFF;
+  --backdrop: #0A0A0D;
+  --bezel: #26261F;
+  --blue: #3FA9FF;
+  --neon-core: #FFE3EC;
+  --neon-soft: #FFD3E0;
+  --neon-hot: #FF8FAE;
+  --neon-white: #FFF4F7;
+  --muted-on-card: #5A5648;
+  --pink-offset: rgba(255, 78, 125, .92);
   --t2: rgba(255, 255, 255, .6);
   --t3: rgba(255, 255, 255, .5);
-  --t4: rgba(255, 255, 255, .4);
+  --t4: rgba(255, 255, 255, .48);
   --disabled: rgba(255, 255, 255, .28);
   --display: var(--font-archivo), 'Archivo', system-ui, sans-serif;
   --body: var(--font-jakarta), 'Plus Jakarta Sans', system-ui, sans-serif;
@@ -36,7 +46,7 @@
 }
 
 @media (min-width: 700px) {
-  .tl-shell { padding: 40px 20px; background: #0a0a0d; }
+  .tl-shell { padding: 40px 20px; background: var(--backdrop); }
 }
 
 .tl-app {
@@ -58,7 +68,7 @@
     width: 414px;
     height: min(868px, calc(100dvh - 80px));
     border-radius: 44px;
-    box-shadow: 0 0 0 12px #26261F, 0 40px 90px rgba(0, 0, 0, .6);
+    box-shadow: 0 0 0 12px var(--bezel), 0 40px 90px rgba(0, 0, 0, .6);
   }
 }
 
@@ -74,19 +84,19 @@ button.tl-wordmark { padding: 6px 0; line-height: 1; }
 .tl-shell button.tl-wordmark { color: var(--pink); font-family: var(--display); }
 /* Neon sign: light core + layered pink glow; flickers on once at load. */
 .tl-wordmark {
-  color: #FFD3E0;
+  color: var(--neon-soft);
   text-shadow:
-    0 0 1px #fff,
-    0 0 4px #FF4E7D,
-    0 0 10px #FF4E7D,
+    0 0 1px var(--white),
+    0 0 4px var(--pink),
+    0 0 10px var(--pink),
     0 0 22px rgba(255, 78, 125, .75),
     0 0 42px rgba(255, 78, 125, .45);
   animation: tl-neon-on 2.2s ease-in-out 1;
 }
-.tl-shell button.tl-wordmark { color: #FFD3E0; }
+.tl-shell button.tl-wordmark { color: var(--neon-soft); }
 .tl-wordmark--still { animation: none; }
 .tl-wordmark__tld {
-  color: #FF8FAE;
+  color: var(--neon-hot);
   text-shadow: 0 0 4px rgba(255, 78, 125, .7), 0 0 12px rgba(255, 78, 125, .45);
 }
 /* Neon warm-up: glows in slowly, then a single flicker before settling. */
@@ -144,7 +154,7 @@ button.tl-wordmark { padding: 6px 0; line-height: 1; }
   transition: background .12s, transform .12s;
 }
 .tl-btn:active { transform: scale(.98); }
-.tl-btn--primary { background: var(--action); color: #fff; }
+.tl-btn--primary { background: var(--action); color: var(--white); }
 .tl-btn--primary:active { background: var(--action-pressed); }
 .tl-btn--secondary { background: rgba(255, 255, 255, .1); color: var(--card); height: 54px; font-size: 13px; }
 .tl-btn--primary:disabled, .tl-btn--secondary:disabled { background: rgba(255, 255, 255, .08); color: rgba(255, 255, 255, .3) !important; }
@@ -197,7 +207,7 @@ button.tl-wordmark { padding: 6px 0; line-height: 1; }
   display: flex; align-items: center; padding: 14px 26px 30px;
 }
 .tl-card {
-  --offset: rgba(255, 78, 125, .92);
+  --offset: var(--pink-offset);
   --glow: rgba(255, 78, 125, .22);
   --label: var(--pink-on-card);
   position: relative; width: 100%;
@@ -227,11 +237,10 @@ button.tl-wordmark { padding: 6px 0; line-height: 1; }
 .tl-card__badges { display: flex; gap: 8px; flex-wrap: wrap; }
 .tl-badge {
   padding: 7px 12px; border-radius: 8px;
-  font: 700 10.5px var(--body); letter-spacing: .1em; text-transform: uppercase;
+  font: 700 11px var(--body); letter-spacing: .1em; text-transform: uppercase;
   background: var(--sand); color: var(--ink);
 }
-.tl-badge--dark { background: var(--ink); color: var(--card); }
-.tl-badge--alert { background: var(--action); color: #fff; }
+.tl-badge--alert { background: var(--action); color: var(--white); }
 .tl-card__skipped {
   position: absolute; top: 22px; right: 22px;
   padding: 6px 10px; border-radius: 8px; border: 2px solid var(--action);
@@ -252,18 +261,18 @@ button.tl-wordmark { padding: 6px 0; line-height: 1; }
   flex: none; align-self: center; min-width: 205px; text-align: center; margin: 0 0 8px;
   font: 800 58px/1 var(--display); letter-spacing: .02em; font-variant-numeric: tabular-nums;
   /* Soft neon, same family as the wordmark but quieter. */
-  color: #FFF4F7;
+  color: var(--neon-white);
   text-shadow: 0 0 2px rgba(255, 255, 255, .6), 0 0 8px rgba(255, 78, 125, .45), 0 0 18px rgba(255, 78, 125, .25);
   transition: color .3s, text-shadow .3s;
 }
 .tl-timer[data-state="low"] {
-  color: #FFD3E0;
+  color: var(--neon-soft);
   text-shadow: 0 0 2px rgba(255, 255, 255, .5), 0 0 8px rgba(255, 78, 125, .7), 0 0 20px rgba(255, 78, 125, .45);
 }
 /* Time's up: bright neon blink — full glow on, near-dark off. */
 .tl-timer[data-state="done"] {
-  color: #fff;
-  text-shadow: 0 0 3px #fff, 0 0 10px #FF4E7D, 0 0 24px #FF4E7D, 0 0 48px rgba(255, 78, 125, .8);
+  color: var(--white);
+  text-shadow: 0 0 3px var(--white), 0 0 10px var(--pink), 0 0 24px var(--pink), 0 0 48px rgba(255, 78, 125, .8);
   animation: tl-blink .7s steps(1, end) infinite;
 }
 @media (max-height: 700px) {
@@ -303,11 +312,11 @@ button.tl-wordmark { padding: 6px 0; line-height: 1; }
 .tl-home { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; padding: 0 24px 16px; text-align: center; }
 .tl-stack { position: relative; width: 190px; height: 190px; flex: none; margin-bottom: 28px; }
 .tl-stack__card { position: absolute; inset: 14px 24px; border-radius: 30px; }
-.tl-stack__card--blue { background: #3FA9FF; transform: translateX(-8px) rotate(-14deg); animation: tl-breathe-blue 4.5s ease-in-out infinite; }
-.tl-stack__card--yellow { background: #FFC93C; transform: translateX(-5px) rotate(-6deg); animation: tl-breathe-yellow 4.5s ease-in-out infinite; }
+.tl-stack__card--blue { background: var(--blue); transform: translateX(-8px) rotate(-14deg); animation: tl-breathe-blue 4.5s ease-in-out infinite; }
+.tl-stack__card--yellow { background: var(--yellow); transform: translateX(-5px) rotate(-6deg); animation: tl-breathe-yellow 4.5s ease-in-out infinite; }
 .tl-stack__card--front {
   inset: 14px 24px; background: var(--card); color: var(--ink);
-  box-shadow: 12px 14px 0 0 rgba(255, 78, 125, .92), 12px 14px 18px 0 rgba(255, 78, 125, .22);
+  box-shadow: 12px 14px 0 0 var(--pink-offset), 12px 14px 18px 0 rgba(255, 78, 125, .22);
   display: flex; align-items: center; justify-content: center; font: 800 80px var(--display);
   transition: transform .15s;
 }
@@ -331,11 +340,11 @@ button.tl-wordmark { padding: 6px 0; line-height: 1; }
 .tl-stack .tl-stack__card--front { background: var(--ink); border: 1px solid rgba(255, 255, 255, .12); }
 .tl-flamingo { width: 76%; height: 80%; overflow: visible; }
 .tl-flamingo g { fill: none; stroke-linecap: round; stroke-linejoin: round; }
-.tl-flamingo__glow { stroke: #FF4E7D; stroke-width: 4.5; filter: drop-shadow(0 0 3px rgba(255, 78, 125, .9)) drop-shadow(0 0 8px rgba(255, 78, 125, .6)); }
-.tl-flamingo__core { stroke: #FFE3EC; stroke-width: 1.5; }
+.tl-flamingo__glow { stroke: var(--pink); stroke-width: 4.5; filter: drop-shadow(0 0 3px rgba(255, 78, 125, .9)) drop-shadow(0 0 8px rgba(255, 78, 125, .6)); }
+.tl-flamingo__core { stroke: var(--neon-core); stroke-width: 1.5; }
 .tl-flamingo__glow .tl-flamingo__leg { stroke-width: 2.8; }
 .tl-flamingo__core .tl-flamingo__leg { stroke-width: 0.9; }
-.tl-flamingo__eye { fill: #FFE3EC; filter: drop-shadow(0 0 2px rgba(255, 78, 125, .9)); }
+.tl-flamingo__eye { fill: var(--neon-core); filter: drop-shadow(0 0 2px rgba(255, 78, 125, .9)); }
 
 /* ── decks ────────────────────────────────────────── */
 .tl-grid {
@@ -376,7 +385,7 @@ button.tl-wordmark { padding: 6px 0; line-height: 1; }
 .tl-tile--all[aria-pressed="true"] { box-shadow: 0 0 0 3px var(--pink); }
 .tl-tile__glyph { font: 800 22px var(--display); }
 .tl-tile__name { display: block; font: 800 13px var(--body); }
-.tl-tile__count { display: block; margin-top: 2px; font: 600 10.5px var(--body); opacity: .7; }
+.tl-tile__count { display: block; margin-top: 2px; font: 600 12px var(--body); opacity: .8; }
 .tl-tile__check {
   position: absolute; top: 11px; right: 11px; width: 24px; height: 24px; border-radius: 50%;
   background: var(--ink); color: var(--card); font: 800 12px var(--body);
@@ -385,7 +394,7 @@ button.tl-wordmark { padding: 6px 0; line-height: 1; }
 .tl-tile--raised .tl-tile__check { background: var(--card); color: var(--ink); }
 .tl-tag {
   padding: 4px 8px; border-radius: 6px; background: rgba(255, 201, 60, .16);
-  font: 800 9px var(--body); letter-spacing: .1em; color: var(--yellow);
+  font: 800 11px var(--body); letter-spacing: .08em; color: var(--yellow);
 }
 
 /* ── sheets ───────────────────────────────────────── */
@@ -410,7 +419,7 @@ button.tl-wordmark { padding: 6px 0; line-height: 1; }
 }
 .tl-lang__code { width: 40px; font: 800 13px var(--body); letter-spacing: .12em; color: var(--pink); }
 .tl-lang__name { font: 800 14px var(--body); color: var(--card); }
-.tl-lang__right { margin-left: auto; font: 800 10px var(--body); letter-spacing: .12em; color: rgba(255, 255, 255, .45); }
+.tl-lang__right { margin-left: auto; font: 800 11px var(--body); letter-spacing: .12em; color: var(--t3); }
 .tl-lang[aria-pressed="true"] { background: var(--card); border-color: var(--card); }
 .tl-lang[aria-pressed="true"] .tl-lang__code { color: var(--pink-on-card); }
 .tl-lang[aria-pressed="true"] .tl-lang__name,
@@ -431,7 +440,7 @@ button.tl-wordmark { padding: 6px 0; line-height: 1; }
   position: absolute; left: 26px; right: 26px; bottom: 166px; z-index: 30;
   display: flex; align-items: center; gap: 12px;
   background: var(--card); color: var(--ink); border-radius: 16px; padding: 12px 14px;
-  box-shadow: 8px 9px 0 0 rgba(255, 78, 125, .92);
+  box-shadow: 8px 9px 0 0 var(--pink-offset);
   animation: tl-up .2s ease-out;
 }
 .tl-toast__disc { width: 30px; height: 30px; border-radius: 50%; background: var(--yellow); display: flex; align-items: center; justify-content: center; font-size: 14px; flex: none; }
@@ -442,7 +451,7 @@ button.tl-wordmark { padding: 6px 0; line-height: 1; }
 .tl-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
 .tl-stat { border-radius: 12px; background: var(--sand); padding: 12px; }
 .tl-stat b { display: block; font: 800 22px var(--display); color: var(--ink); }
-.tl-stat span { display: block; margin-top: 3px; font: 800 9px var(--body); letter-spacing: .12em; color: #5A5648; }
+.tl-stat span { display: block; margin-top: 3px; font: 800 11px var(--body); letter-spacing: .08em; color: var(--muted-on-card); }
 .tl-stat--dark { background: var(--ink); }
 .tl-stat--dark b { color: var(--yellow); }
 .tl-stat--dark span { color: rgba(255, 255, 255, .7); }
@@ -455,19 +464,19 @@ button.tl-wordmark { padding: 6px 0; line-height: 1; }
 }
 .tl-item--hero {
   background: var(--card); border-color: var(--card); color: var(--ink); padding: 18px;
-  box-shadow: 9px 10px 0 0 rgba(255, 78, 125, .92);
+  box-shadow: 9px 10px 0 0 var(--pink-offset);
   margin-right: 9px; margin-bottom: 8px;
 }
-.tl-item__label { font: 800 10px var(--body); letter-spacing: .16em; text-transform: uppercase; color: var(--pink-on-card); }
+.tl-item__label { font: 800 11px var(--body); letter-spacing: .16em; text-transform: uppercase; color: var(--pink-on-card); }
 .tl-item__q { margin: 9px 0 12px; font: 700 15px/1.35 var(--body); color: var(--card); text-wrap: pretty; }
 .tl-item--hero .tl-item__q { margin: 10px 0 14px; font: 800 19px/1.24 var(--display); letter-spacing: -.02em; color: var(--ink); }
 .tl-item--hero .tl-item__q--lg { font-size: 22px; line-height: 1.2; margin-bottom: 0; }
 .tl-item__foot { display: flex; align-items: center; gap: 4px; }
-.tl-item__act { width: 36px; height: 36px; border-radius: 10px; font: 700 15px var(--body); display: flex; align-items: center; justify-content: center; }
+.tl-item__act { width: 44px; height: 44px; border-radius: 10px; font: 700 15px var(--body); display: flex; align-items: center; justify-content: center; }
 .tl-item__act--share { margin-left: auto; color: var(--t3); }
 .tl-item__act--star { color: var(--yellow); }
 .tl-item--hero .tl-item__act--share { color: var(--pink-on-card); }
-.tl-item--hero .tl-item__act--star { color: var(--ink); }
+.tl-item--hero .tl-item__act--star { color: var(--pink-on-card); }
 .tl-rank { font: 800 22px var(--display); letter-spacing: -.03em; color: var(--pink); flex: none; }
 
 .tl-banner {
@@ -502,7 +511,7 @@ button.tl-wordmark { padding: 6px 0; line-height: 1; }
 .tl-card .tl-card__label { padding-right: 44px; }
 .tl-share-preview {
   flex: none; width: 112px; height: 112px; border-radius: 14px; overflow: hidden;
-  background: var(--ground); box-shadow: 7px 8px 0 0 rgba(255, 78, 125, .92);
+  background: var(--ground); box-shadow: 7px 8px 0 0 var(--pink-offset);
   display: flex; align-items: center; justify-content: center;
 }
 .tl-share-preview--story { width: 63px; height: 112px; margin: 0 24px 0 25px; }
@@ -520,19 +529,19 @@ button.tl-wordmark { padding: 6px 0; line-height: 1; }
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
 }
 .tl-targets span { font: 600 17px var(--body); color: var(--card); }
-.tl-targets b { font: 800 9.5px var(--body); letter-spacing: .06em; color: rgba(255, 255, 255, .7); }
+.tl-targets b { font: 800 11px var(--body); letter-spacing: .06em; color: rgba(255, 255, 255, .7); }
 
 /* ── say ──────────────────────────────────────────── */
 .tl-field {
   width: 100%; border-radius: 16px; background: var(--raised); border: 1px solid rgba(255, 255, 255, .12);
   padding: 16px; font: 600 14px/1.5 var(--body); color: var(--card);
 }
-.tl-field::placeholder { color: rgba(255, 255, 255, .38); }
+.tl-field::placeholder { color: var(--t3); }
 .tl-field:focus { outline: none; border: 2px solid var(--pink); padding: 15px; }
 .tl-textarea-wrap { position: relative; }
 .tl-textarea-wrap textarea { min-height: 150px; resize: none; display: block; padding-bottom: 34px; }
 .tl-textarea-wrap textarea:focus { padding-bottom: 33px; }
-.tl-counter { position: absolute; right: 16px; bottom: 12px; font: 600 10.5px var(--body); color: rgba(255, 255, 255, .45); pointer-events: none; }
+.tl-counter { position: absolute; right: 16px; bottom: 12px; font: 600 12px var(--body); color: var(--t3); pointer-events: none; }
 .tl-select-row {
   position: relative; display: flex; align-items: center; justify-content: space-between; height: 58px; border-radius: 16px;
   padding: 0 16px; background: var(--raised); border: 1px solid var(--raised-border);
@@ -548,14 +557,14 @@ button.tl-wordmark { padding: 6px 0; line-height: 1; }
 }
 .tl-error > span:first-child {
   flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--action);
-  display: flex; align-items: center; justify-content: center; font: 800 13px var(--body); color: #fff;
+  display: flex; align-items: center; justify-content: center; font: 800 13px var(--body); color: var(--white);
 }
 .tl-error b { display: block; font: 800 13px var(--body); color: var(--card); }
 .tl-error small { display: block; margin-top: 4px; font: 500 12.5px/1.5 var(--body); color: rgba(255, 255, 255, .7); }
 .tl-board-title { margin: 18px 0 2px; font: 800 11px var(--body); letter-spacing: .16em; color: var(--t4); }
 .tl-post { display: flex; gap: 14px; align-items: flex-start; }
-.tl-post__votes { flex: none; width: 30px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.tl-post__votes button { width: 30px; height: 24px; font-size: 12px; color: var(--t4); border-radius: 8px; }
+.tl-post__votes { flex: none; width: 44px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.tl-post__votes button { width: 44px; height: 36px; font-size: 13px; color: var(--t4); border-radius: 8px; }
 .tl-post__votes button[aria-pressed="true"] { color: var(--pink); }
 .tl-post__votes span { font: 800 13px var(--body); color: var(--card); }
 .tl-post__text { margin: 0; font: 600 14px/1.5 var(--body); color: rgba(255, 255, 255, .85); white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -597,6 +606,11 @@ button.tl-wordmark { padding: 6px 0; line-height: 1; }
   flex: none; width: 44px; height: 44px; border-radius: 14px; background: rgba(255, 255, 255, .1);
   display: flex; align-items: center; justify-content: center; font: 800 16px var(--body); color: var(--card); overflow: hidden;
 }
+/* Tiny tilted card with the pink offset: "tap the card". */
+.tl-ob-key--card i {
+  width: 18px; height: 24px; border-radius: 4px; background: var(--card);
+  box-shadow: 3px 3px 0 0 var(--pink-offset); transform: rotate(-6deg);
+}
 .tl-who {
   display: flex; align-items: center; gap: 12px; height: 66px; border-radius: 18px; padding: 0 16px; width: 100%; text-align: left;
   background: var(--raised); border: 1px solid var(--raised-border);
@@ -628,7 +642,7 @@ button.tl-wordmark { padding: 6px 0; line-height: 1; }
   flex: none; width: 28px; height: 28px; border-radius: 9px; background: rgba(255, 255, 255, .1); margin-right: 4px;
   display: flex; align-items: center; justify-content: center; font: 800 12px var(--body); color: var(--yellow);
 }
-.tl-install-steps b { font: 700 15px var(--body); color: #3FA9FF; }
+.tl-install-steps b { font: 700 15px var(--body); color: var(--blue); }
 
 .tl-placeholder { flex: 1; display: flex; flex-direction: column; padding: 56px 24px 0; }
 
