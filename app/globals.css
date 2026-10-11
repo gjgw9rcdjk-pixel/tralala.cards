@@ -241,7 +241,7 @@ body[data-playing="true"] .land-footer {
 
 .land-vibe-blurb {
   font: 600 11.5px/1.45 var(--font-jakarta), system-ui, sans-serif;
-  opacity: .72;
+  opacity: .9;
 }
 
 /* Sample questions: one cream card per deck, same pink offset as the game. */
