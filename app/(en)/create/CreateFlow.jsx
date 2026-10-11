@@ -523,6 +523,7 @@ export default function CreateFlow({ admin, initialUi = 'en' }) {
 
   const saveAndPlay = () => {
     const entry = storeDeck(deck);
+    setListOpen(false);
     keepPlace(entry.id, 0); // an edited deck starts from the first card
     setPlaying(entry);
     setCardIdx(0);
@@ -552,6 +553,7 @@ export default function CreateFlow({ admin, initialUi = 'en' }) {
   const startOver = () => {
     stopLive();
     setStep(0); setIdea(''); setSet(null); setDeck(null); setPlaying(null); setEditing(false); setError(null); setMeta(null);
+    setListOpen(false);
   };
 
   // An 18+ deck opens with a card that explains the *flamingo* word.
@@ -569,6 +571,10 @@ export default function CreateFlow({ admin, initialUi = 'en' }) {
   };
   const playFrom = (i) => { setCardIdx(i); setView('cards'); };
   const openDeck = (d) => { setPlaying(d); setCardIdx(0); setView('cover'); };
+  // "My decks" before writing a new one: the latest deck's cover with the
+  // list already open. Saved decks live in this browser, so no code is needed.
+  const [listOpen, setListOpen] = useState(false);
+  const openSaved = () => { openDeck(saved[0]); setListOpen(true); setStep(3); };
   const goCard = (d) => {
     const i = cardIdx + d;
     if (i < 0) return;
@@ -628,8 +634,10 @@ export default function CreateFlow({ admin, initialUi = 'en' }) {
   // Waiting for the saved code to be checked: show nothing rather than flash
   // the code screen.
   if (!passReady) return <div className="tl-shell"><div className="tl-app tc-app" /></div>;
-  if (!admin && !pass) {
-    return <CodeScreen s={s} ui={ui} setUi={setUi} error={codeError && errText(s, codeError)} onSubmit={checkCode} />;
+  // Playing and editing saved decks needs no code; writing a new one does.
+  if (!admin && !pass && step !== 3 && !editing) {
+    return <CodeScreen s={s} ui={ui} setUi={setUi} error={codeError && errText(s, codeError)} onSubmit={checkCode}
+      savedCount={saved.length} onSaved={openSaved} />;
   }
 
   return (
@@ -648,7 +656,7 @@ export default function CreateFlow({ admin, initialUi = 'en' }) {
           <UiLang ui={ui} setUi={setUi} />
         </header>
 
-        {!admin && step !== 1 && step < 3 && (
+        {!admin && pass && step !== 1 && step < 3 && (
           <div className="tc-pass">
             <span><b>{s.decksLeft(pass.left)}</b> · {s.until(new Date(pass.expiresAt).toLocaleDateString(ui === 'lt' ? 'lt-LT' : 'en-GB'))}</span>
             {!busy && !writing && <button className="tl-link" onClick={forgetCode}>{s.otherCode}</button>}
@@ -712,7 +720,8 @@ export default function CreateFlow({ admin, initialUi = 'en' }) {
             />
           ) : step === 0 ? (
             <IdeaStep s={s} ui={ui} idea={idea} setIdea={setIdea} lang={lang} setLang={setLang}
-              otherLang={otherLang} setOtherLang={setOtherLang} count={count} setCount={setCount} />
+              otherLang={otherLang} setOtherLang={setOtherLang} count={count} setCount={setCount}
+              savedCount={saved.length} onSaved={openSaved} />
           ) : step === 1 && set ? (
             <ClarifyStep s={s} ui={ui} set={set} refined={refined} setRefined={setRefined}
               answers={answers} setAnswers={setAnswers} adultHint={adultHint} adult={adult} setAdult={setAdult} />
@@ -730,7 +739,8 @@ export default function CreateFlow({ admin, initialUi = 'en' }) {
           ) : step === 3 && playing ? (
             <PlayCover s={s} ui={ui} deck={playDeck} resumeAt={progress[playing.id] || 0} onRestart={() => playFrom(0)}
               tvOn={tv.status === 'on'} onTv={() => setTvOpen(true)} onEdit={editPlaying}
-              saved={saved} onOpen={openDeck} onNew={outOfDecks ? null : startOver} />
+              saved={saved} onOpen={openDeck} onNew={outOfDecks ? null : startOver}
+              listOpen={listOpen} setListOpen={setListOpen} />
           ) : null}
         </div>
 
@@ -787,7 +797,7 @@ function UiLang({ ui, setUi }) {
 }
 
 // ── 0 · promo code ──────────────────────────────────────────────────────
-function CodeScreen({ s, ui, setUi, error, onSubmit }) {
+function CodeScreen({ s, ui, setUi, error, onSubmit, savedCount, onSaved }) {
   const [code, setCode] = useState('');
   const [checking, setChecking] = useState(false);
   const ready = code.replace(/[^a-z0-9]/gi, '').length === 8;
@@ -827,16 +837,18 @@ function CodeScreen({ s, ui, setUi, error, onSubmit }) {
               spellCheck={false}
               placeholder="XXXX-XXXX"
               onChange={(e) => setCode(e.target.value)}
+              enterKeyHint="go"
               autoFocus
             />
+            {/* Right under the field, not in the footer: on a phone the
+                keyboard opens at once (autoFocus) and covers the footer. */}
+            <button type="submit" className="tl-btn tl-btn--primary tc-code-go" disabled={!ready || checking}>
+              {checking ? s.codeChecking : s.codeGo}
+            </button>
             <p className="tl-note tc-code-note">{s.codeNote}</p>
+            <SavedLink s={s} count={savedCount} onOpen={onSaved} />
           </div>
         </div>
-        <footer className="tl-pad tc-foot">
-          <button type="submit" className="tl-btn tl-btn--primary" disabled={!ready || checking}>
-            {checking ? s.codeChecking : s.codeGo}
-          </button>
-        </footer>
       </form>
     </div>
   );
@@ -904,9 +916,22 @@ function Thinking({ lines, wait: waitNote }) {
 // ── 1 · idea ────────────────────────────────────────────────────────────
 const CARD_COUNTS = [15, 20, 25, 30, 35, 40, 45, 50];
 
-function IdeaStep({ s, ui, idea, setIdea, lang, setLang, otherLang, setOtherLang, count, setCount }) {
+// Way into "My decks" from the first screens, shown once a deck is saved.
+function SavedLink({ s, count, onOpen }) {
+  if (!count) return null;
+  return (
+    <button type="button" className="tl-row tc-decks-toggle tc-saved-link" onClick={onOpen}>
+      <span className="tc-decks-toggle__label">{s.myDecks}</span>
+      <span className="tc-decks-toggle__count">{count}</span>
+      <span className="tc-decks-toggle__chev" aria-hidden="true">→</span>
+    </button>
+  );
+}
+
+function IdeaStep({ s, ui, idea, setIdea, lang, setLang, otherLang, setOtherLang, count, setCount, savedCount, onSaved }) {
   return (
     <div className="tc-body tc-body--fill">
+      <SavedLink s={s} count={savedCount} onOpen={onSaved} />
       <Head title={s.ideaTitle} hint={s.ideaHint} />
       {/* The field takes the height left over, so the whole step fits one
           screen; the counter has its own row and text never runs under it. */}
@@ -1337,8 +1362,7 @@ const langLabel = (code, ui) => DECK_LANGS.find((l) => l.code === code)?.name[ui
 
 // The deck's cover: what it is, one big Play (or Continue) in the footer,
 // TV and editing next to it, and the other saved decks below.
-function PlayCover({ s, ui, deck, resumeAt, onRestart, tvOn, onTv, onEdit, saved, onOpen, onNew }) {
-  const [open, setOpen] = useState(false);
+function PlayCover({ s, ui, deck, resumeAt, onRestart, tvOn, onTv, onEdit, saved, onOpen, onNew, listOpen: open, setListOpen: setOpen }) {
   const listRef = useRef(null);
   useEffect(() => {
     if (open) listRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
