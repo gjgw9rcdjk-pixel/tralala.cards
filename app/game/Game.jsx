@@ -400,12 +400,12 @@ export default function Game({ initialLang = 'en' }) {
     return () => window.removeEventListener('keydown', onKey);
   });
 
-  // Picking who's at the table deals their decks straight away; skipping or
-  // "choose a deck" opens the deck picker.
+  // Picking who's at the table deals their decks straight away; "Other",
+  // skipping or "choose a deck" opens the deck picker.
   const finishTour = (pick) => {
     writeJson(ONBOARDED_KEY, { at: Date.now(), audience: pick?.audience || null });
-    track('onboarding_done', { lang, audience: pick?.audience || '', started: !!pick });
-    if (pick) startDeck(pick.decks);
+    track('onboarding_done', { lang, audience: pick?.audience || '', started: !!pick?.decks });
+    if (pick?.decks) startDeck(pick.decks);
     else openDecks();
   };
 

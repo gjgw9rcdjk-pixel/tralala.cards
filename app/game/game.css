@@ -242,7 +242,7 @@ button.tl-wordmark { padding: 6px 0; line-height: 1; }
 .tl-card--green { --offset: rgba(58, 208, 122, .92); --glow: transparent; --label: var(--green-on-card); }
 .tl-flamingo { color: var(--pink-on-card); }
 /* On dark rows the word glows in the wordmark's neon pink. */
-.tl-quote .tl-flamingo, .tl-item:not(.tl-item--hero) .tl-flamingo { color: var(--pink); text-shadow: 0 0 10px rgba(255, 78, 125, .45); }
+.tl-quote .tl-flamingo, .tl-item .tl-flamingo { color: var(--pink); text-shadow: 0 0 10px rgba(255, 78, 125, .45); }
 .tl-card__label { font: 800 11px var(--body); letter-spacing: .16em; color: var(--label); text-transform: uppercase; }
 .tl-card__q {
   margin: 16px 0 24px;
@@ -526,21 +526,13 @@ button.tl-wordmark { padding: 6px 0; line-height: 1; }
   border-radius: 18px; padding: 16px 18px;
   background: var(--raised); border: 1px solid var(--raised-border);
 }
-.tl-item--hero {
-  background: var(--card); border-color: var(--card); color: var(--ink); padding: 18px;
-  box-shadow: 9px 10px 0 0 var(--pink-offset);
-  margin-right: 9px; margin-bottom: 8px;
-}
 .tl-item__label { font: 800 11px var(--body); letter-spacing: .16em; text-transform: uppercase; color: var(--pink-on-card); }
 .tl-item__q { margin: 9px 0 12px; font: 700 15px/1.35 var(--body); color: var(--card); text-wrap: pretty; }
-.tl-item--hero .tl-item__q { margin: 10px 0 14px; font: 800 19px/1.24 var(--display); letter-spacing: -.02em; color: var(--ink); }
-.tl-item--hero .tl-item__q--lg { font-size: 22px; line-height: 1.2; margin-bottom: 0; }
 .tl-item__foot { display: flex; align-items: center; gap: 4px; }
+.tl-item__date { font: 700 11px var(--body); letter-spacing: .1em; color: var(--t3); }
 .tl-item__act { width: 44px; height: 44px; border-radius: 10px; font: 700 15px var(--body); display: flex; align-items: center; justify-content: center; }
 .tl-item__act--share { margin-left: auto; color: var(--t3); }
 .tl-item__act--star { color: var(--yellow); }
-.tl-item--hero .tl-item__act--share { color: var(--pink-on-card); }
-.tl-item--hero .tl-item__act--star { color: var(--pink-on-card); }
 .tl-rank { font: 800 22px var(--display); letter-spacing: -.03em; color: var(--pink); flex: none; }
 
 .tl-banner {

@@ -11,6 +11,8 @@ export const AUDIENCES = [
   { id: 'date', key: 'whoDate', glyph: '♥', color: '#B579FF', decks: ['duo', 'night', 'dnd'] },
   { id: 'family', key: 'whoFamily', glyph: '◆', color: '#3FA9FF', decks: ['know', 'door', 'firsts'] },
   { id: 'work', key: 'whoWork', glyph: '♦', color: '#3AD07A', decks: ['reply', 'union', 'know'] },
+  // No decks: opens the deck picker instead of dealing.
+  { id: 'other', key: 'whoOther', glyph: '✳', color: '#FFFDF8', decks: null },
 ];
 
 export function Splash() {

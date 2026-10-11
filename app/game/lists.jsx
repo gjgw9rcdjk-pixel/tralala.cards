@@ -61,16 +61,15 @@ export function SavedScreen({ s, lang, saved, savedAt, onUnsave, onShare, onStar
       )}
       <div className="tl-scroll">
         <div className="tl-list">
-          {shown.map((row, i) => {
+          {shown.map((row) => {
             const cat = catOf(row);
             const at = savedAt[row[1]];
-            const first = i === 0;
             return (
-              <div key={row[1]} className={first ? 'tl-item tl-item--hero' : 'tl-item'}>
-                <div className="tl-item__label" style={first ? undefined : { color: labelColor(cat.id) }}>{cat.names[lang]}</div>
+              <div key={row[1]} className="tl-item">
+                <div className="tl-item__label" style={{ color: labelColor(cat.id) }}>{cat.names[lang]}</div>
                 <p className="tl-item__q" lang={lang}><QText text={row[2][lang]} /></p>
                 <div className="tl-item__foot">
-                  {first && at && <span className="tl-badge">{fmt(s.savedOn, { date: dateFmt.format(at).toUpperCase() })}</span>}
+                  {at && <span className="tl-item__date">{fmt(s.savedOn, { date: dateFmt.format(at).toUpperCase() })}</span>}
                   <button className="tl-item__act tl-item__act--share" onClick={() => onShare(row[1])} aria-label={s.ariaShare}>↗</button>
                   <button className="tl-item__act tl-item__act--star" onClick={() => onUnsave(row[1])} aria-label={s.ariaUnsave}>★</button>
                 </div>
