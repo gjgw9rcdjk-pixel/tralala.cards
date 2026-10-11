@@ -39,11 +39,12 @@ const SAMPLES = Object.fromEntries(
 export default function LandingContent({ lang: initialLang = 'en' }) {
   const lang = useLandingLang(initialLang);
   const t = LANDING[lang] ?? LANDING.en;
-  // Vibe links stay on this route's own path (e.g. /lt/?vibe=deep#play) —
+  // Vibe links stay on this route's own path (e.g. /lt?vibe=deep#play) —
   // tied to the page's own language, not whatever the switcher currently
   // shows, so a crawler (which never clicks the switcher) always lands back
   // on the same indexed URL it came from.
-  const vibeBasePath = PATH_BY_LANG[initialLang] === '/' ? '' : PATH_BY_LANG[initialLang];
+  // No slash before '?': /de/ would 308 to /de. English is the root, so '/'.
+  const vibeBasePath = PATH_BY_LANG[initialLang];
 
   return (
     <>
@@ -68,7 +69,7 @@ export default function LandingContent({ lang: initialLang = 'en' }) {
                 key={c.id}
                 className={`land-vibe-card${DECK_STYLE[c.id].color ? '' : ' land-vibe-card--raised'}`}
                 style={DECK_STYLE[c.id].color ? { '--vibe': DECK_STYLE[c.id].color } : undefined}
-                href={`${vibeBasePath}/?vibe=${c.id}#play`}
+                href={`${vibeBasePath}?vibe=${c.id}#play`}
               >
                 <span className="land-vibe-icon" aria-hidden="true">{DECK_STYLE[c.id].glyph}</span>
                 <span className="land-vibe-name">{t.vibes[c.id]?.title}</span>
@@ -98,7 +99,7 @@ export default function LandingContent({ lang: initialLang = 'en' }) {
                 <ul className="land-sample-list">
                   {SAMPLES[c.id].map((q) => <li key={q[1]} lang={lang}>{q[2][lang]}</li>)}
                 </ul>
-                <a className="land-sample-play" href={`${vibeBasePath}/?vibe=${c.id}#play`}>{t.samplesPlay} →</a>
+                <a className="land-sample-play" href={`${vibeBasePath}?vibe=${c.id}#play`}>{t.samplesPlay} →</a>
               </article>
             ))}
           </div>
