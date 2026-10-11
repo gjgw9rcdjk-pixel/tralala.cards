@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { QUESTION_BY_ID } from '@/lib/content';
 import { PATH_BY_LANG } from '@/lib/seo';
 import { renderCard, SURFACES } from '@/lib/shareImage';
@@ -37,7 +37,30 @@ export function ShareSheet({ s, lang, id, text: ownText, fromSaved, onClose }) {
   const [status, setStatus] = useState('');
 
   const imageFormat = format === 'link' ? 'square' : format;
-  const make = (f) => renderCard({ text, format: f, surface });
+
+  // Images are rendered ahead of the tap: iPhone Safari only opens the share
+  // menu if navigator.share() runs right after the tap, so there is no time
+  // to draw the PNG then. `ready` holds finished blobs for instant use.
+  const pending = useRef(new Map());
+  const ready = useRef(new Map());
+  const keyOf = (f) => `${f}|${surface}|${text}`;
+  const make = (f) => {
+    const key = keyOf(f);
+    if (!pending.current.has(key)) {
+      pending.current.set(key, renderCard({ text, format: f, surface }).then((blob) => {
+        if (blob) ready.current.set(key, blob);
+        else pending.current.delete(key);
+        return blob;
+      }));
+    }
+    return pending.current.get(key);
+  };
+
+  useEffect(() => {
+    make('square');
+    make('story');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [surface, text]);
 
   useEffect(() => { if (id) track('share_open', { question: id, lang }); }, [id, lang]);
 
@@ -61,12 +84,18 @@ export function ShareSheet({ s, lang, id, text: ownText, fromSaved, onClose }) {
     setTimeout(() => setStatus(''), 2200);
   };
 
-  const shareImage = async (f) => {
-    const blob = await make(f);
+  // Opens the phone's share menu with the image (its "Save Image" puts it in
+  // Photos). Where that menu can't take files, e.g. desktop, it downloads.
+  const shareImage = async (f, withLink = true) => {
+    const blob = ready.current.get(keyOf(f)) || await make(f);
+    if (!blob) {
+      flash(s.shareFailed);
+      return;
+    }
     const file = new File([blob], fileName, { type: 'image/png' });
     try {
       if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], text: link });
+        await navigator.share(withLink ? { files: [file], text: link } : { files: [file] });
         return;
       }
     } catch (e) {
@@ -99,10 +128,7 @@ export function ShareSheet({ s, lang, id, text: ownText, fromSaved, onClose }) {
     }
   };
 
-  const saveImage = async () => {
-    download(await make(imageFormat), fileName);
-    flash(s.imageSaved);
-  };
+  const saveImage = () => shareImage(imageFormat, false);
 
   const targets = [
     ['↗', s.story, () => shareImage('story')],
