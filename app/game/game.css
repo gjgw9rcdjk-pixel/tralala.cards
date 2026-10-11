@@ -403,6 +403,48 @@ button.tl-wordmark { padding: 6px 0; line-height: 1; }
 .tl-tile[aria-pressed="true"] { box-shadow: 0 0 0 3px var(--card); }
 .tl-tile--all { background: var(--card); }
 .tl-tile--link { text-decoration: none; }
+.tl-tile--opening { border-color: var(--pink); }
+.tl-tile--opening .tl-tile__name { animation: tl-opening 0.9s ease-in-out infinite; }
+@keyframes tl-opening { 50% { opacity: 0.4; } }
+
+/* "Make your own cards": dark tile like Spicy, a neon "NEW · AI" sticker
+   that flickers on every few seconds, and the home-screen flamingo drawing
+   itself in, staying lit, then fading to start again. */
+.tl-tile--create { background: var(--raised); border: 1px solid var(--raised-border); color: var(--card); }
+.tl-tile--create .tl-tile__name { max-width: calc(100% - 40px); position: relative; }
+.tl-tile--create .tl-tile__for { color: var(--t2); opacity: 1; }
+.tl-tile--create .tl-tile__for { white-space: nowrap; }
+.tl-caret { display: inline-block; width: 2px; height: 1.05em; margin-left: 1px; vertical-align: -2px; background: var(--pink); box-shadow: 0 0 4px var(--pink); animation: tl-caret .8s steps(1) infinite; }
+@keyframes tl-caret { 50% { opacity: 0; } }
+.tl-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.tl-neon-tag {
+  font: 800 10px var(--body); letter-spacing: .06em; color: var(--neon-core);
+  border: 1.5px solid var(--neon-core); border-radius: 999px; padding: 2px 8px;
+  box-shadow: 0 0 3px var(--pink), 0 0 9px rgba(255, 78, 125, .7), inset 0 0 5px rgba(255, 78, 125, .5);
+  text-shadow: 0 0 4px var(--pink);
+  animation: tl-tag-on 4s infinite;
+}
+@keyframes tl-tag-on {
+  0%, 6% { opacity: .2; box-shadow: none; text-shadow: none; }
+  8% { opacity: 1; }
+  10% { opacity: .3; }
+  12%, 100% { opacity: 1; }
+}
+.tl-tile--create .tl-create__flamingo { position: absolute; right: 4px; top: 6px; width: 50px; height: 76px; }
+.tl-create__flamingo .tl-flamingo__glow { stroke-width: 5.5; filter: drop-shadow(0 0 3px rgba(255, 78, 125, 1)) drop-shadow(0 0 10px rgba(255, 78, 125, .85)) drop-shadow(0 0 18px rgba(255, 78, 125, .5)); }
+.tl-create__flamingo .tl-flamingo__core { stroke: var(--neon-white); stroke-width: 1.9; }
+.tl-create__flamingo g > * { stroke-dasharray: 1; animation: tl-tube-draw 7s cubic-bezier(.2, .8, .2, 1) infinite; }
+.tl-create__flamingo .tl-flamingo__eye { animation: tl-eye 7s infinite; }
+@keyframes tl-tube-draw {
+  0% { stroke-dashoffset: 1; opacity: 1; }
+  22%, 90% { stroke-dashoffset: 0; opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 0; }
+}
+@keyframes tl-eye { 0%, 18% { opacity: 0; } 22%, 90% { opacity: 1; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .tl-tile--opening .tl-tile__name, .tl-neon-tag, .tl-create__flamingo g > *, .tl-create__flamingo .tl-flamingo__eye { animation: none; }
+  .tl-create__flamingo g > * { stroke-dashoffset: 0; }
+}
 .tl-tile--all[aria-pressed="true"] { box-shadow: 0 0 0 3px var(--pink); }
 .tl-tile__glyph { font: 800 22px var(--display); }
 .tl-tile__name { display: block; font: 800 13px var(--body); }

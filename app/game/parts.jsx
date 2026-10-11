@@ -285,6 +285,38 @@ export function QuestionCard({ s, lang, row, filtered, cardRef, dragged, onPoint
 
 // ── decks picker ────────────────────────────────────────────────────────
 
+// Types each phrase out, holds it, erases it, then moves to the next. Screen
+// readers get all phrases at once; reduced motion shows the first one still.
+function TypingLine({ phrases, className }) {
+  const [i, setI] = useState(0);
+  const [len, setLen] = useState(phrases[0].length);
+  const [erasing, setErasing] = useState(false);
+  const [still, setStill] = useState(true);
+  useEffect(() => {
+    setStill(window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }, []);
+  const text = phrases[i];
+  useEffect(() => {
+    if (still) return undefined;
+    const full = text.length;
+    let wait;
+    if (!erasing && len < full) wait = setTimeout(() => setLen(len + 1), 55);
+    else if (!erasing) wait = setTimeout(() => setErasing(true), 2200);
+    else if (len > 0) wait = setTimeout(() => setLen(len - 1), 28);
+    else wait = setTimeout(() => { setErasing(false); setI((i + 1) % phrases.length); }, 350);
+    return () => clearTimeout(wait);
+  }, [still, i, len, erasing, text, phrases.length]);
+  return (
+    <span className={className}>
+      <span className="tl-sr">{phrases.join(', ')}</span>
+      <span aria-hidden="true">
+        {still ? phrases[0] : text.slice(0, len)}
+        {!still && <span className="tl-caret" />}
+      </span>
+    </span>
+  );
+}
+
 function DeckTile({ s, lang, cat, on, count, onToggle }) {
   // The Spicy deck shrinks with the spice level; show how much is left in play.
   const fullCount = countFor(cat.id, 'nomercy');
@@ -317,6 +349,14 @@ export function DecksScreen({ s, lang, draft, spice, timerOn, fullCount, playCou
   // "All cards" (empty draft) plays the CORE decks, so tick those too. Tapping
   // a deck then still picks just that one.
   const isOn = (id) => (draft.length ? draft.includes(id) : CORE.includes(id));
+  // /create is a separate page load; show it's on its way so the tap doesn't
+  // look ignored. Reset when the browser restores this page from "back".
+  const [opening, setOpening] = useState(false);
+  useEffect(() => {
+    const reset = (e) => { if (e.persisted) setOpening(false); };
+    window.addEventListener('pageshow', reset);
+    return () => window.removeEventListener('pageshow', reset);
+  }, []);
   return (
     <div className="tl-screen">
       <div className="tl-decks-head">
@@ -335,9 +375,18 @@ export function DecksScreen({ s, lang, draft, spice, timerOn, fullCount, playCou
             {draft.length === 0 && <span className="tl-tile__check" aria-hidden="true">✓</span>}
           </button>
           {/* AI deck generator (app/(en)/create); asks for a promo code first. */}
-          <a className="tl-tile tl-tile--dashed tl-tile--link" href={lang === 'lt' ? '/create?ui=lt' : '/create'}>
-            <span className="tl-tile__glyph" aria-hidden="true">✦</span>
-            <span className="tl-tile__name">{s.makeOwn}</span>
+          <a
+            className={`tl-tile tl-tile--create tl-tile--link${opening ? ' tl-tile--opening' : ''}`}
+            href={lang === 'lt' ? '/create?ui=lt' : '/create'}
+            aria-busy={opening}
+            onClick={() => setOpening(true)}
+          >
+            <span className="tl-neon-tag">{s.newTag}</span>
+            <span>
+              <span className="tl-tile__name">{opening ? s.opening : s.makeOwn}</span>
+              <TypingLine className="tl-tile__for" phrases={[s.makeOwnSub, s.makeOwnSub2]} />
+            </span>
+            <NeonFlamingo className="tl-flamingo tl-create__flamingo" />
           </a>
           {decks.map((c) => (
             <DeckTile key={c.id} s={s} lang={lang} cat={c} on={isOn(c.id)} count={countFor(c.id, spice)} onToggle={onToggle} />

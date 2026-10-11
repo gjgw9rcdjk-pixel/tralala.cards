@@ -22,6 +22,7 @@ const DECKS_KEY = 'tralala.customDecks';
 const TIP_KEY = 'tralala.create.dragTipSeen';
 const MODE_KEY = 'tralala.create.mode';
 const CODE_KEY = 'tralala.create.code';
+const PASS_KEY = 'tralala.create.pass'; // last checked pass, shown while it's re-checked
 const PROGRESS_KEY = 'tralala.create.progress'; // { deckId: card index }
 const THINK_MS = 1600;
 const SWAP_MS = 700;
@@ -218,9 +219,19 @@ export default function CreateFlow({ admin, initialUi = 'en' }) {
       window.history.replaceState(null, '', url.pathname + url.search);
     }
     const code = fromLink || readJson(CODE_KEY, '');
-    if (code) checkCode(code).finally(() => setPassReady(true));
+    const cached = fromLink ? null : readJson(PASS_KEY, null);
+    if (code && cached?.code === code && new Date(cached.expiresAt) > new Date()) {
+      // Show the page straight away with the last known pass and re-check it
+      // quietly; only a definite "no" from the server sends back to the code screen.
+      setPass(cached);
+      setPassReady(true);
+      recheckCode(code);
+    } else if (code) checkCode(code).finally(() => setPassReady(true));
     else setPassReady(true);
   }, [admin]);
+
+  // Remember the latest pass (decks left can change) for the next visit.
+  useEffect(() => { if (pass) writeJson(PASS_KEY, pass); }, [pass]);
 
   const [codeError, setCodeError] = useState(null);
   const checkCode = async (code) => {
@@ -241,6 +252,25 @@ export default function CreateFlow({ admin, initialUi = 'en' }) {
       setPass(null);
     }
   };
+  const recheckCode = async (code) => {
+    let res;
+    try {
+      res = await fetch('/api/create/code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      });
+    } catch { return; } // offline: keep the cached pass
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      writeJson(CODE_KEY, data.code);
+      setPass(data);
+    } else if (data.error) {
+      try { localStorage.removeItem(PASS_KEY); } catch { /* private mode */ }
+      setCodeError(apiError(data, `Request failed (${res.status}).`));
+      setPass(null);
+    }
+  };
   // Asks the server how many decks are really left (after a dropped
   // connection the page can't know whether the deck was counted).
   const refreshPass = async () => {
@@ -254,7 +284,10 @@ export default function CreateFlow({ admin, initialUi = 'en' }) {
     } catch { /* still offline; keep what we have */ }
   };
   const forgetCode = () => {
-    try { localStorage.removeItem(CODE_KEY); } catch { /* private mode */ }
+    try {
+      localStorage.removeItem(CODE_KEY);
+      localStorage.removeItem(PASS_KEY);
+    } catch { /* private mode */ }
     setPass(null);
     setCodeError(null);
   };
