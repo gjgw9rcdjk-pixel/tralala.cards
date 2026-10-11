@@ -28,6 +28,7 @@ const PROBLEM = {
   too_long: 'AI answer cut off',
   empty: 'AI sent nothing',
   rate_limit: 'AI busy',
+  no_credit: 'Out of API credit / spend limit',
   auth: 'API key problem',
   api: 'AI service error',
   server: 'Server error',
@@ -35,7 +36,8 @@ const PROBLEM = {
 const secs = (ms) => (ms == null ? '—' : `${Math.round(ms / 1000)} s`);
 const usd = (n) => (n == null ? '—' : `$${n.toFixed(n < 1 ? 3 : 2)}`);
 const avg = (xs) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
-const MONTH = 30 * 24 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+const MONTH = 30 * DAY_MS;
 
 // Deck stats (logDeck in app/api/create/codes.js): last 30 days, finished decks.
 function DeckStats({ decks, codes }) {
@@ -111,6 +113,9 @@ export default function AdminCodes() {
   const [created, setCreated] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  // Credit or API key trouble in the last 24 h: shown at the top, because
+  // /create is down for every code user until it's fixed.
+  const accountAlert = problems.find((p) => (p.kind === 'no_credit' || p.kind === 'auth') && p.at > Date.now() - DAY_MS);
 
   const run = async (body) => {
     setBusy(true);
@@ -156,6 +161,13 @@ export default function AdminCodes() {
               <h1 className="tl-title">New code</h1>
               <p className="tl-sub">One deck = one generation. Everyone with the code shares the same decks. Works for 30 days.</p>
             </div>
+
+            {accountAlert && (
+              <div className="tl-error tc-err" role="alert">
+                <span>!</span>
+                <div><b>{PROBLEM[accountAlert.kind]}</b><small>{when(accountAlert.at)}. /create is failing for everyone until this is fixed in the Anthropic console (credit, spend limit or API key).</small></div>
+              </div>
+            )}
 
             {error && (
               <div className="tl-error tc-err" role="alert">

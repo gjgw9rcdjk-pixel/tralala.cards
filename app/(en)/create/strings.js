@@ -121,6 +121,11 @@ export const CREATE_STRINGS = {
       swaps_used_up: 'No more swaps for this deck.',
       daily_limit: 'Tralala has written a lot of cards today. Try again tomorrow.',
       connection_lost: 'The connection dropped. Keep the screen on and try again.',
+      // AI-side failures: plain words, no technical details.
+      no_credit: 'Tralala is taking a break. Try again a bit later.',
+      auth: 'Tralala is taking a break. Try again a bit later.',
+      rate_limit: 'Tralala is busy right now. Try again in a minute.',
+      api: 'Tralala is busy right now. Try again in a minute.',
     },
   },
   lt: {
@@ -235,6 +240,10 @@ export const CREATE_STRINGS = {
       swaps_used_up: 'Šiai kaladei keitimų nebeliko.',
       daily_limit: 'Tralala šiandien parašė daug kortų. Bandyk rytoj.',
       connection_lost: 'Nutrūko ryšys. Laikyk ekraną įjungtą ir bandyk dar kartą.',
+      no_credit: 'Tralala daro pertraukėlę. Bandyk šiek tiek vėliau.',
+      auth: 'Tralala daro pertraukėlę. Bandyk šiek tiek vėliau.',
+      rate_limit: 'Tralala dabar užimta. Bandyk po minutės.',
+      api: 'Tralala dabar užimta. Bandyk po minutės.',
     },
   },
 };
