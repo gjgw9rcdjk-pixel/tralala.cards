@@ -97,13 +97,18 @@ export function errorInfo(err) {
   if (err instanceof CodeError) return { error: err.code };
   if (err instanceof AiError) return { error: err.code, message: err.message };
   if (err instanceof Anthropic.AuthenticationError) return { error: 'auth', message: 'API key is missing or invalid.' };
+  // Out of prepaid credit or over the monthly spend limit in the Anthropic
+  // console: the API answers 400 with a billing message.
+  if (err instanceof Anthropic.APIError && err.status === 400 && /credit balance|usage limit|spend limit|billing/i.test(err.message)) {
+    return { error: 'no_credit', message: 'The AI account is out of credit.' };
+  }
   if (err instanceof Anthropic.RateLimitError) return { error: 'rate_limit', message: 'Too many requests right now. Try again in a minute.' };
   if (err instanceof Anthropic.APIError) return { error: 'api', message: `AI service error (${err.status}).` };
   console.error('[create]', err);
   return { error: 'server', message: 'Something went wrong on the server.' };
 }
 
-const STATUS = { auth: 500, rate_limit: 429, server: 500 };
+const STATUS = { auth: 500, no_credit: 503, rate_limit: 429, server: 500 };
 export function errorResponse(err) {
   const info = errorInfo(err);
   return Response.json(info, { status: err instanceof CodeError ? err.status : STATUS[info.error] || 502 });

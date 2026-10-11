@@ -134,20 +134,29 @@ function TvCard({ card, t }) {
   const dir = card.i < last.current ? 'back' : 'next';
   useEffect(() => { last.current = card.i; }, [card.i]);
 
-  // Shrink the question until the card fits the screen.
+  // Size the question to fill the card: the largest font at which the card
+  // keeps its 16:9 shape (or fits the screen, whichever is smaller) and no
+  // word sticks out. Capped so a three-word card doesn't turn into a poster.
   const qRef = useRef(null);
   useLayoutEffect(() => {
     const p = qRef.current;
     const box = p?.closest('.tv-stage');
     if (!p || !box) return undefined;
     const fit = () => {
-      p.style.fontSize = '';
-      let size = parseFloat(getComputedStyle(p).fontSize);
       const cardEl = p.parentElement;
-      while (cardEl.offsetHeight > box.clientHeight * 0.86 && size > 28) {
-        size -= 2;
+      const fits = (size) => {
         p.style.fontSize = `${size}px`;
+        const maxH = Math.min(cardEl.offsetWidth * 9 / 16, box.clientHeight * 0.86);
+        return cardEl.offsetHeight <= maxH + 1 && p.scrollWidth <= p.clientWidth + 1;
+      };
+      let lo = 28;
+      let hi = Math.max(lo, Math.round(box.clientHeight * 0.13));
+      if (fits(hi)) return;
+      while (hi - lo > 1) {
+        const mid = Math.floor((lo + hi) / 2);
+        if (fits(mid)) lo = mid; else hi = mid;
       }
+      fits(lo);
     };
     fit();
     const ro = new ResizeObserver(fit);

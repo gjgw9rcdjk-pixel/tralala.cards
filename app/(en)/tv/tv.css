@@ -45,7 +45,7 @@
 }
 /* Card-shaped, not a banner: width follows the screen height so a wide TV
    doesn’t stretch it into a strip; 16:9 is a floor, long text grows it. */
-.tv-card-wrap { position: relative; width: min(100%, 104vh); padding-top: 13vh; }
+.tv-card-wrap { position: relative; width: min(100%, 112vh); padding-top: 13vh; }
 .tv-card-wrap[data-dir="next"] { animation: tv-in-next .42s cubic-bezier(.2, .7, .3, 1) both; }
 .tv-card-wrap[data-dir="back"] { animation: tv-in-back .42s cubic-bezier(.2, .7, .3, 1) both; }
 
