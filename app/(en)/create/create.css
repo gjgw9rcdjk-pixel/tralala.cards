@@ -212,6 +212,8 @@
 .tc-app .tc-cover__acts .tl-btn { width: auto; gap: 8px; white-space: nowrap; }
 .tc-app .tc-cover__tv svg { width: 20px; height: 20px; flex: none; }
 .tc-app .tc-cover__tv[data-on="true"] { background: rgba(255, 78, 125, .18); box-shadow: 0 0 0 1px var(--pink); }
+.tc-app .tc-saved-link { margin: 0 0 14px; flex: none; }
+.tc-app .tc-code-note + .tc-saved-link { margin: 24px 0 0; }
 .tc-app .tc-cover__new { margin-top: 8px; height: 56px; cursor: pointer; font: 800 14px var(--body); color: var(--card); }
 .tc-app .tc-cover__new:disabled { color: var(--t4); cursor: default; }
 
@@ -298,6 +300,7 @@
 
 /* ── promo code ────────────────────────────────────── */
 .tc-app .tc-code-input { font: 800 22px var(--body) !important; letter-spacing: .14em; text-transform: uppercase; text-align: center; }
+.tc-app .tc-code-go { width: 100%; margin-top: 14px; }
 .tc-app .tc-code-note { margin-top: 14px; }
 .tc-app .tc-pass {
   display: flex; align-items: center; gap: 10px; margin: 14px 24px 0;
