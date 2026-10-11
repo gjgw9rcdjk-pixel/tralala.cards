@@ -15,16 +15,16 @@ import { SavedScreen } from './lists';
 import { SayScreen } from './say';
 import { ShareSheet } from './share';
 import { TvButton, TvSheet, useTvRemote } from './tv';
-import { InstallSheet, Onboarding, Splash, useInstallPrompt } from './onboarding';
+import { InstallSheet, Splash, Tour, useInstallPrompt } from './onboarding';
 import './game.css';
 
 const SAVED_KEY = 'tralala.saved';
 const SAVED_AT_KEY = 'tralala.savedAt';
 const SETTINGS_KEY = 'tralala.settings';
 const ONBOARDED_KEY = 'tralala.onboarded';
-// Onboarding is switched off for now: START goes straight to the deck
-// picker. Set to true to bring the two onboarding steps back.
-const ONBOARDING_ON = false;
+// The TV button glows once, on the first deck after the tour.
+const TV_HINT_KEY = 'tralala.tvHinted';
+const TV_HINT_MS = 6000;
 const INSTALL_KEY = 'tralala.installDismissed';
 // Long enough for the wordmark's neon warm-up (2.2s) to finish on the splash.
 const SPLASH_MS = 2200;
@@ -64,7 +64,7 @@ function rememberLang(l) {
 
 export default function Game({ initialLang = 'en' }) {
   const [lang, setLang] = useState(initialLang);
-  const [screen, setScreen] = useState('home'); // onboarding | home | deck | decks | end | saved | say
+  const [screen, setScreen] = useState('home'); // tour | home | deck | decks | end | saved | say
   const [splash, setSplash] = useState(false);
   const [sheet, setSheet] = useState(null); // lang | install | share
   const [shareOf, setShareOf] = useState(null); // { id, fromSaved }
@@ -86,6 +86,7 @@ export default function Game({ initialLang = 'en' }) {
   const [toast, setToast] = useState(null); // { id }
   // Finger offset while swiping; only one axis moves at a time.
   const [dragged, setDragged] = useState(NO_DRAG);
+  const [tvHint, setTvHint] = useState(false);
 
   const cardRef = useRef(null);
   const busy = useRef(false);
@@ -116,6 +117,10 @@ export default function Game({ initialLang = 'en' }) {
     // that card first; the landing page's vibe cards (?vibe=<categoryId>)
     // open a deck filtered to that category.
     const params = new URLSearchParams(window.location.search);
+    // ?ob=reset: see the tour again as a first-time visitor (for testing).
+    if (params.get('ob') === 'reset') {
+      try { localStorage.removeItem(ONBOARDED_KEY); localStorage.removeItem(TV_HINT_KEY); } catch {}
+    }
     const q = params.get('q');
     const vibe = params.get('vibe');
     if (q && QUESTION_BY_ID.has(q)) {
@@ -395,15 +400,23 @@ export default function Game({ initialLang = 'en' }) {
     return () => window.removeEventListener('keydown', onKey);
   });
 
-  const finishOnboarding = ({ start: go, decks, audience }) => {
-    writeJson(ONBOARDED_KEY, { at: Date.now(), audience });
-    track('onboarding_done', { lang, audience: audience.join(','), started: go });
-    // Onboarding only runs after START, so both finishing and skipping
-    // carry on to the deck picker.
-    setSelected(decks);
-    setDraft(decks);
-    setScreen('decks');
+  // Picking who's at the table deals their decks straight away; skipping or
+  // "choose a deck" opens the deck picker.
+  const finishTour = (pick) => {
+    writeJson(ONBOARDED_KEY, { at: Date.now(), audience: pick?.audience || null });
+    track('onboarding_done', { lang, audience: pick?.audience || '', started: !!pick });
+    if (pick) startDeck(pick.decks);
+    else openDecks();
   };
+
+  // The TV button glows for a few seconds on the first deck after the tour.
+  useEffect(() => {
+    if (screen !== 'deck' || !readJson(ONBOARDED_KEY, false) || readJson(TV_HINT_KEY, false)) return undefined;
+    writeJson(TV_HINT_KEY, true);
+    setTvHint(true);
+    const t = setTimeout(() => setTvHint(false), TV_HINT_MS);
+    return () => clearTimeout(t);
+  }, [screen]);
 
   // Install prompt: only after the first finished round, and only once.
   const installer = useInstallPrompt();
@@ -440,11 +453,15 @@ export default function Game({ initialLang = 'en' }) {
     else setScreen(tab);
   };
   // START on the home screen opens the deck picker; PLAY there deals.
-  // The very first START shows the two onboarding steps first.
+  // The very first START shows the tour first.
   const start = () => {
     track('session_start', { lang });
-    if (ONBOARDING_ON && !readJson(ONBOARDED_KEY, false)) setScreen('onboarding');
+    if (!readJson(ONBOARDED_KEY, false)) setScreen('tour');
     else openDecks();
+  };
+  const replayTour = () => {
+    track('tour_replay', { lang });
+    setScreen('tour');
   };
 
   const fullCount = deckIds([], spice).length;
@@ -456,7 +473,7 @@ export default function Game({ initialLang = 'en' }) {
   return (
     <div className="tl-shell">
       <div className="tl-app">
-        {screen === 'onboarding' && <Onboarding lang={lang} onDone={finishOnboarding} />}
+        {screen === 'tour' && <Tour lang={lang} onDone={finishTour} />}
         {splash && <Splash />}
 
         {screen === 'home' && (
@@ -466,6 +483,7 @@ export default function Game({ initialLang = 'en' }) {
             onHome={goHome}
             onLang={() => setSheet('lang')}
             onStart={start}
+            onHow={replayTour}
             resume={inProgress ? { i: pos + 1, n: order.length } : null}
             onResume={() => setScreen('deck')}
           />
@@ -492,7 +510,7 @@ export default function Game({ initialLang = 'en' }) {
                     ? CATEGORIES.find((c) => c.id === selected[0]).names[lang].toUpperCase()
                     : fmt(s.catsPicked, { k: selected.length })}
               </button>
-              <TvButton tv={tv} label={s.ariaTv} onClick={() => setSheet('tv')} />
+              <TvButton tv={tv} hint={tvHint} label={s.ariaTv} onClick={() => { setTvHint(false); setSheet('tv'); }} />
             </div>
             {loop > 0 && pos < 2 && <div className="tl-deck-meta" style={{ paddingTop: 4 }}>● {s.startingOver}</div>}
             <div className="tl-card-area">
@@ -590,7 +608,7 @@ export default function Game({ initialLang = 'en' }) {
 
         {screen === 'say' && <SayScreen s={s} lang={lang} onPlay={() => goTab('play')} />}
 
-        {screen !== 'decks' && screen !== 'onboarding' && <BottomNav current={tab} onGo={goTab} s={s} showInstall={!installer.installed} />}
+        {screen !== 'decks' && screen !== 'tour' && <BottomNav current={tab} onGo={goTab} s={s} showInstall={!installer.installed} />}
 
         {sheet === 'lang' && <LanguageSheet s={s} lang={lang} onPick={chooseLang} onClose={() => setSheet(null)} />}
         {sheet === 'install' && (

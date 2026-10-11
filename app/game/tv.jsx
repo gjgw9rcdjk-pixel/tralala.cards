@@ -97,9 +97,9 @@ export function TvIcon({ className }) {
   );
 }
 
-export function TvButton({ tv, label, onClick }) {
+export function TvButton({ tv, hint, label, onClick }) {
   return (
-    <button className="tl-icon-sm tl-tv-btn" data-on={tv.status === 'on'} onClick={onClick} aria-label={label}>
+    <button className="tl-icon-sm tl-tv-btn" data-on={tv.status === 'on'} data-hint={!!hint} onClick={onClick} aria-label={label}>
       <TvIcon />
     </button>
   );

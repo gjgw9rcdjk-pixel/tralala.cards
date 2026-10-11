@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { CATEGORIES, QUESTIONS, QUESTION_BY_ID } from '@/lib/content';
-import { DECK_STYLE, DECK_AUDIENCE, UI_LANGUAGES, VISIBLE_DECKS, SPICE_LEVELS, SPICE_EXAMPLE, TIMER_SECONDS, countFor, deckOffset } from '@/lib/gameMeta';
+import { CATEGORIES, CORE, QUESTIONS, QUESTION_BY_ID } from '@/lib/content';
+import { DECK_STYLE, DECK_AUDIENCE, UI_LANGUAGES, DECK_ORDER, SPICE_LEVELS, SPICE_EXAMPLE, TIMER_SECONDS, countFor, deckOffset } from '@/lib/gameMeta';
 import { cards, fmt } from '@/lib/gameStrings';
 
 const catName = (c, lang) => c.names[lang];
@@ -137,7 +137,7 @@ export function NeonFlamingo({ className }) {
 
 // Home: the same card stack as the app icon, headline + one-line pitch,
 // then the actions, grouped low on the screen within thumb reach.
-export function HomeScreen({ s, lang, onHome, onLang, onStart, resume, onResume }) {
+export function HomeScreen({ s, lang, onHome, onLang, onStart, onHow, resume, onResume }) {
   return (
     <div className="tl-screen">
       <div className="tl-topbar">
@@ -160,6 +160,7 @@ export function HomeScreen({ s, lang, onHome, onLang, onStart, resume, onResume 
             </button>
           )}
           <div className="tl-home__trust">{s.trustLine}</div>
+          {s.homeHow && <button className="tl-home__how" onClick={onHow}>{s.homeHow}</button>}
         </div>
       </div>
     </div>
@@ -284,7 +285,7 @@ export function QuestionCard({ s, lang, row, filtered, cardRef, dragged, onPoint
 
 // ── decks picker ────────────────────────────────────────────────────────
 
-function DeckTile({ s, lang, cat, on, count, onToggle, tileRef }) {
+function DeckTile({ s, lang, cat, on, count, onToggle }) {
   // The Spicy deck shrinks with the spice level; show how much is left in play.
   const fullCount = countFor(cat.id, 'nomercy');
   const style = DECK_STYLE[cat.id];
@@ -292,7 +293,6 @@ function DeckTile({ s, lang, cat, on, count, onToggle, tileRef }) {
   const audience = DECK_AUDIENCE[cat.id]?.[lang] || DECK_AUDIENCE[cat.id]?.en;
   return (
     <button
-      ref={tileRef}
       className={`tl-tile${raised ? ' tl-tile--raised' : ''}`}
       style={raised ? undefined : { background: style.color }}
       aria-pressed={on}
@@ -310,17 +310,13 @@ function DeckTile({ s, lang, cat, on, count, onToggle, tileRef }) {
 }
 
 export function DecksScreen({ s, lang, draft, spice, timerOn, fullCount, playCount, onToggle, onClear, onBack, onPlay, onSpice, onTimer }) {
-  const visible = CATEGORIES.slice(0, VISIBLE_DECKS);
-  const hidden = CATEGORIES.slice(VISIBLE_DECKS);
-  const hiddenPicked = hidden.filter((c) => draft.includes(c.id)).length;
-  // "+N more" expands the rest of the decks inline, below the grid. Opens
-  // already expanded when one of the hidden decks is picked.
-  const [expanded, setExpanded] = useState(hiddenPicked > 0);
-  const firstHiddenRef = useRef(null);
-  const expand = () => {
-    setExpanded(true);
-    requestAnimationFrame(() => firstHiddenRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
-  };
+  const decks = [
+    ...DECK_ORDER.map((id) => CATEGORIES.find((c) => c.id === id)).filter(Boolean),
+    ...CATEGORIES.filter((c) => !DECK_ORDER.includes(c.id)),
+  ];
+  // "All cards" (empty draft) plays the CORE decks, so tick those too. Tapping
+  // a deck then still picks just that one.
+  const isOn = (id) => (draft.length ? draft.includes(id) : CORE.includes(id));
   return (
     <div className="tl-screen">
       <div className="tl-decks-head">
@@ -329,7 +325,7 @@ export function DecksScreen({ s, lang, draft, spice, timerOn, fullCount, playCou
         {draft.length > 0 && <button className="tl-link" style={{ marginLeft: 'auto' }} onClick={onClear}>{s.clear}</button>}
       </div>
       <div className="tl-scroll tl-decks-body">
-        <div className={`tl-grid tl-grid--compact${expanded ? ' tl-grid--expanded' : ''}`}>
+        <div className="tl-grid tl-grid--compact tl-grid--expanded">
           <button className="tl-tile tl-tile--all" aria-pressed={draft.length === 0} onClick={onClear}>
             <span className="tl-tile__glyph" aria-hidden="true">✳</span>
             <span>
@@ -343,29 +339,9 @@ export function DecksScreen({ s, lang, draft, spice, timerOn, fullCount, playCou
             <span className="tl-tile__glyph" aria-hidden="true">✦</span>
             <span className="tl-tile__name">{s.makeOwn}</span>
           </a>
-          {visible.map((c) => (
-            <DeckTile key={c.id} s={s} lang={lang} cat={c} on={draft.includes(c.id)} count={countFor(c.id, spice)} onToggle={onToggle} />
+          {decks.map((c) => (
+            <DeckTile key={c.id} s={s} lang={lang} cat={c} on={isOn(c.id)} count={countFor(c.id, spice)} onToggle={onToggle} />
           ))}
-          {expanded ? hidden.map((c, i) => (
-            <DeckTile
-              key={c.id}
-              tileRef={i === 0 ? firstHiddenRef : undefined}
-              s={s}
-              lang={lang}
-              cat={c}
-              on={draft.includes(c.id)}
-              count={countFor(c.id, spice)}
-              onToggle={onToggle}
-            />
-          )) : (
-            <button className="tl-tile tl-tile--dashed" onClick={expand} aria-expanded={false}>
-              <span className="tl-tile__glyph" aria-hidden="true">+</span>
-              <span>
-                <span className="tl-tile__name">{fmt(s.moreDecks, { n: hidden.length })}</span>
-                <span className="tl-tile__count">{`${hidden.slice(0, 3).map((c) => catName(c, lang)).join(' · ')} …`}</span>
-              </span>
-            </button>
-          )}
         </div>
         {draft.includes('spicy') && (
           <div style={{ flex: 'none', padding: '0 24px 8px' }}>

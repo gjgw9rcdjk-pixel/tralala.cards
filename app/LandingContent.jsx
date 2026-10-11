@@ -21,6 +21,9 @@ const SAMPLE_PICKS = {
   duo: ['duo-01', 'duo-04', 'duo-13'],
   door: ['door-01', 'door-08', 'door-12'],
   fries: ['fries-01', 'fries-14', 'fries-19'],
+  lights: ['lights-03', 'lights-20', 'lights-22'],
+  cart: ['cart-03', 'cart-13', 'cart-14'],
+  snow: ['snow-02', 'snow-06', 'snow-13'],
 };
 
 const SAMPLES = Object.fromEntries(
