@@ -12,6 +12,7 @@
 //   tralala:adultok:<CODE>            clarify offered the 18+ switch (1 day)
 //   tralala:create:problems           last 200 failures (see logProblem)
 //   tralala:create:decks              last 200 written decks: timing and cost (see logDeck)
+//   tralala:create:dropped            last 200 cards people ✕ removed or ↻ swapped (see logDropped)
 //   tralala:codefail:<ip>             wrong codes typed in the last 15 min
 //
 // Without KV env vars (local dev) everything lives in memory and resets
@@ -266,5 +267,26 @@ export async function logDeck({ code, name, lang, count, cards, firstCardMs, tot
 
 export async function listDecks(n = DECKS_MAX) {
   const rows = await store.list(DECKS_KEY, n);
+  return rows.map((r) => (typeof r === 'string' ? JSON.parse(r) : r));
+}
+
+// ── dropped cards, for the admin page ───────────────────────────────────
+// Cards a code user removed (✕) or swapped (↻) while making a deck: what
+// the AI writes that people don't want. Card text can carry names from the
+// idea, so only the last 200 are kept.
+const DROPPED_KEY = 'tralala:create:dropped';
+const DROPPED_MAX = 200;
+
+export async function logDropped({ code, kind, text }) {
+  await store.push(DROPPED_KEY, {
+    at: Date.now(),
+    code: normalizeCode(code) || null,
+    kind,
+    text: String(text ?? '').slice(0, 300),
+  }, DROPPED_MAX);
+}
+
+export async function listDropped(n = 50) {
+  const rows = await store.list(DROPPED_KEY, n);
   return rows.map((r) => (typeof r === 'string' ? JSON.parse(r) : r));
 }

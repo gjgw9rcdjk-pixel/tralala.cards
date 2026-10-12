@@ -6,6 +6,7 @@
 import { useEffect, useState } from 'react';
 import '@/app/game/game.css';
 import '../create.css';
+import { track } from '@/lib/analytics';
 
 async function codesApi(body) {
   const res = await fetch('/api/create/codes', {
@@ -40,16 +41,41 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const MONTH = 30 * DAY_MS;
 
 // Deck stats (logDeck in app/api/create/codes.js): last 30 days, finished decks.
+// Money and the daily cap: what to keep an eye on during testing.
+// usage comes from usage() in app/api/create/ai.js.
+function Spending({ usage }) {
+  if (!usage) return null;
+  const over = usage.callsToday - usage.dailyLimit;
+  return (
+    <>
+      <span className="tc-label">Spending</span>
+      <div className="ta-stats">
+        <div className="ta-stat">
+          <small>This month</small>
+          <b>{usd(usage.spendMonth)}</b>
+          {/* Counting started 2026-10-12, so October is only part of the month. */}
+          <small>all AI calls{new Date().toISOString().startsWith('2026-10') ? ', since Oct 12' : ''}</small>
+        </div>
+        <div className="ta-stat">
+          <small>AI calls today</small>
+          <b>{Math.min(usage.callsToday, usage.dailyLimit)} / {usage.dailyLimit}</b>
+          {over > 0 && <small className="ta-stat__warn">{over} turned away</small>}
+        </div>
+      </div>
+    </>
+  );
+}
+
 function DeckStats({ decks, codes }) {
+  const [all, setAll] = useState(false);
   const recent = decks.filter((d) => d.at > Date.now() - MONTH);
   const done = recent.filter((d) => d.ok);
   const nums = (k) => done.map((d) => d[k]).filter((v) => typeof v === 'number');
-  const total = nums('cost').reduce((a, b) => a + b, 0);
   const tiles = [
     ['Decks', `${done.length}${recent.length > done.length ? ` (+${recent.length - done.length} failed)` : ''}`],
     ['First card after', secs(avg(nums('firstCardMs')))],
     ['Whole deck', secs(avg(nums('totalMs')))],
-    ['Cost per deck', `${usd(avg(nums('cost')))} · ${usd(total)} total`],
+    ['Cost per deck', usd(avg(nums('cost')))],
   ];
   return (
     <>
@@ -57,12 +83,13 @@ function DeckStats({ decks, codes }) {
       <div className="ta-stats">
         {tiles.map(([k, v]) => <div key={k} className="ta-stat"><small>{k}</small><b>{v}</b></div>)}
       </div>
+      <CostBySize done={done} />
       <span className="tc-label">Recent decks</span>
       {decks.length === 0 ? (
         <p className="tl-note">No decks written since stats started.</p>
       ) : (
         <ul className="ta-list">
-          {decks.slice(0, 30).map((d, i) => {
+          {decks.slice(0, all ? 30 : 1).map((d, i) => {
             const note = codes?.find((c) => c.code === d.code)?.note;
             return (
               <li key={`${d.at}-${i}`} className="ta-row">
@@ -79,6 +106,71 @@ function DeckStats({ decks, codes }) {
           })}
         </ul>
       )}
+      <MoreToggle open={all} setOpen={setAll} count={Math.min(decks.length, 30)} few={1} />
+    </>
+  );
+}
+
+// Average cost of a finished deck by how many cards were asked for: the
+// numbers behind a price per deck.
+function CostBySize({ done }) {
+  const bySize = {};
+  for (const d of done) {
+    if (typeof d.cost !== 'number' || !d.count) continue;
+    (bySize[d.count] ||= []).push(d.cost);
+  }
+  const sizes = Object.keys(bySize).map(Number).sort((a, b) => a - b);
+  if (!sizes.length) return null;
+  return (
+    <>
+      <span className="tc-label">Cost by deck size · last 30 days</span>
+      <ul className="ta-list">
+        {sizes.map((n) => (
+          <li key={n} className="ta-row ta-row--slim">
+            <div className="ta-row__main"><b className="ta-row__deck">{n} cards</b></div>
+            <span className="ta-row__num">{usd(avg(bySize[n]))} <small>· {bySize[n].length} {bySize[n].length === 1 ? 'deck' : 'decks'}</small></span>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
+// Long lists show their first few rows until opened.
+const FEW = 5;
+function MoreToggle({ open, setOpen, count, few = FEW }) {
+  if (count <= few) return null;
+  return (
+    <button className="tl-row tc-decks-toggle ta-codes-toggle" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+      <span className="tc-decks-toggle__label">{open ? 'Show fewer' : 'Show all'}</span>
+      {!open && <span className="tc-decks-toggle__count">{count}</span>}
+      <span className="tc-decks-toggle__chev" aria-hidden="true">▾</span>
+    </button>
+  );
+}
+
+// Cards people ✕ removed or ↻ swapped while making a deck (logDropped in
+// app/api/create/codes.js): what to teach the AI not to write.
+function Dropped({ dropped, codes }) {
+  const [all, setAll] = useState(false);
+  if (!dropped.length) return null;
+  return (
+    <>
+      <span className="tc-label">Cards people didn’t want</span>
+      <ul className="ta-list">
+        {(all ? dropped : dropped.slice(0, FEW)).map((d, i) => {
+          const note = codes?.find((c) => c.code === d.code)?.note;
+          return (
+            <li key={`${d.at}-${i}`} className="ta-row">
+              <div className="ta-row__main">
+                <span className="ta-row__text">{d.kind === 'swap' ? '↻' : '✕'} {d.text}</span>
+                <small>{when(d.at)} · {d.code ? `${d.code}${note ? ` · ${note}` : ''}` : '—'}</small>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      <MoreToggle open={all} setOpen={setAll} count={dropped.length} />
     </>
   );
 }
@@ -110,9 +202,14 @@ export default function AdminCodes() {
   const [codes, setCodes] = useState(null);
   const [problems, setProblems] = useState([]);
   const [decks, setDecks] = useState([]);
+  const [usage, setUsage] = useState(null);
+  const [dropped, setDropped] = useState([]);
   const [created, setCreated] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  // The code list shows only the newest code until it's expanded.
+  const [allCodes, setAllCodes] = useState(false);
+  const [allProblems, setAllProblems] = useState(false);
   // Credit or API key trouble in the last 24 h: shown at the top, because
   // /create is down for every code user until it's fixed.
   const accountAlert = problems.find((p) => (p.kind === 'no_credit' || p.kind === 'auth') && p.at > Date.now() - DAY_MS);
@@ -125,6 +222,8 @@ export default function AdminCodes() {
       setCodes(r.codes);
       setProblems(r.problems || []);
       setDecks(r.decks || []);
+      setUsage(r.usage || null);
+      setDropped(r.dropped || []);
       return r;
     } catch (e) {
       setError(e.message);
@@ -134,7 +233,10 @@ export default function AdminCodes() {
     }
   };
 
-  useEffect(() => { run({ action: 'list' }); }, []);
+  useEffect(() => {
+    run({ action: 'list' });
+    track('owner'); // this device is the owner's: keep it out of /insights
+  }, []);
 
   const create = async () => {
     const r = await run({ action: 'create', note, limit });
@@ -209,14 +311,14 @@ export default function AdminCodes() {
               </div>
             )}
 
-            <span className="tc-label">All codes</span>
+            <span className="tc-label">{allCodes ? 'All codes' : 'Latest code'}</span>
             {codes === null ? (
               <p className="tl-note">Loading…</p>
             ) : codes.length === 0 ? (
               <p className="tl-note">No codes yet.</p>
             ) : (
               <ul className="ta-list">
-                {codes.map((c) => {
+                {(allCodes ? codes : codes.slice(0, 1)).map((c) => {
                   const st = status(c);
                   return (
                     <li key={c.code} className="ta-row" data-status={st}>
@@ -226,6 +328,7 @@ export default function AdminCodes() {
                         <small>{c.used}/{c.limit} decks · until {day(c.expiresAt)} · {st}</small>
                       </div>
                       <div className="ta-row__acts">
+                        <CopyBtn text={c.code} label="Code" />
                         <CopyBtn text={linkFor(c.code)} label="Link" />
                         {st === 'Active' && <button className="tl-btn tl-btn--secondary" onClick={() => disable(c.code)}>Off</button>}
                       </div>
@@ -234,15 +337,24 @@ export default function AdminCodes() {
                 })}
               </ul>
             )}
+            {codes?.length > 1 && (
+              <button className="tl-row tc-decks-toggle ta-codes-toggle" aria-expanded={allCodes} onClick={() => setAllCodes((o) => !o)}>
+                <span className="tc-decks-toggle__label">{allCodes ? 'Show latest only' : 'All codes'}</span>
+                {!allCodes && <span className="tc-decks-toggle__count">{codes.length}</span>}
+                <span className="tc-decks-toggle__chev" aria-hidden="true">▾</span>
+              </button>
+            )}
 
+            <Spending usage={usage} />
             <DeckStats decks={decks} codes={codes} />
+            <Dropped dropped={dropped} codes={codes} />
 
             <span className="tc-label">Recent problems</span>
             {problems.length === 0 ? (
               <p className="tl-note">Nothing has gone wrong.</p>
             ) : (
               <ul className="ta-list">
-                {problems.map((p) => {
+                {(allProblems ? problems : problems.slice(0, 1)).map((p) => {
                   const note = codes?.find((c) => c.code === p.code)?.note;
                   return (
                     <li key={`${p.at}-${p.route}-${p.code}`} className="ta-row">
@@ -256,6 +368,7 @@ export default function AdminCodes() {
                 })}
               </ul>
             )}
+            <MoreToggle open={allProblems} setOpen={setAllProblems} count={problems.length} few={1} />
           </div>
         </div>
       </div>

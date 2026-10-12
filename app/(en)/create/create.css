@@ -325,9 +325,16 @@
 .tc-app .ta-stat { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 14px; background: var(--raised); border: 1px solid var(--raised-border); }
 .tc-app .ta-stat small { font: 700 11px var(--body); letter-spacing: .04em; color: var(--t2); }
 .tc-app .ta-stat b { font: 800 17px var(--display); color: var(--card); }
+.tc-app .ta-stat b + small { font-weight: 600; letter-spacing: 0; color: var(--t3); }
+.tc-app .ta-stat b + small.ta-stat__warn { color: var(--pink); }
 .tc-app .ta-row__main b { font: 800 15px var(--body); letter-spacing: .08em; color: var(--card); }
 .tc-app .ta-row__main span { font: 600 13px var(--body); color: var(--t2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tc-app .ta-row__main small { font: 600 11px var(--body); color: var(--t4); }
+.tc-app .ta-codes-toggle { margin-top: 8px; width: 100%; }
+.tc-app .ta-row--slim { padding-top: 10px; padding-bottom: 10px; }
+.tc-app .ta-row__num { flex: none; font: 800 15px var(--display); color: var(--card); }
+.tc-app .ta-row__num small { font: 600 12px var(--body); color: var(--t3); }
+.tc-app .ta-row__main .ta-row__text { font: 600 14px/1.35 var(--body); color: var(--card); white-space: normal; }
 .tc-app .ta-row__acts { flex: none; display: flex; gap: 6px; }
 .tc-app .ta-row__acts .tl-btn { height: 40px; width: auto; padding: 0 12px; font-size: 11px; border-radius: 12px; }
 .tc-app .tc-out { margin: 14px 24px 0; }

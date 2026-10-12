@@ -13,6 +13,7 @@ import { NeonFlamingo, QText, qSizeClass } from '@/app/game/parts';
 import { ShareSheet } from '@/app/game/share';
 import { TvButton, TvIcon, TvSheet, useTvRemote } from '@/app/game/tv';
 import { GAME_STRINGS } from '@/lib/gameStrings';
+import { track } from '@/lib/analytics';
 import { CREATE_STRINGS, DECK_LANGS, IDEA_EXAMPLES, STEPS } from './strings';
 import { DECK_SIZE, MOCK_SETS, setForIdea } from './mockData';
 import '@/app/game/game.css';
@@ -233,6 +234,24 @@ export default function CreateFlow({ admin, initialUi = 'en' }) {
   // Remember the latest pass (decks left can change) for the next visit.
   useEffect(() => { if (pass) writeJson(PASS_KEY, pass); }, [pass]);
 
+  // Anonymous step counts for /insights (app/api/track): how far people get.
+  const logStep = (name, extra) => track('create', { step: name, ...extra });
+  // A card the player didn't want (✕ or ↻) while making a deck: counted for
+  // /insights and, on a code, kept for the list on /create/admin.
+  const logDropped = (kind, text) => {
+    track('create_card', { what: kind });
+    if (admin || !text) return;
+    fetch('/api/create/dropped', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: readJson(CODE_KEY, ''), kind, text }),
+      keepalive: true,
+    }).catch(() => {});
+  };
+  useEffect(() => { logStep('open'); }, []);
+  const hasPass = Boolean(pass);
+  useEffect(() => { if (hasPass) logStep('code'); }, [hasPass]);
+
   const [codeError, setCodeError] = useState(null);
   const checkCode = async (code) => {
     setCodeError(null);
@@ -344,6 +363,7 @@ export default function CreateFlow({ admin, initialUi = 'en' }) {
         setRefined(r.refined);
         setAdultHint(Boolean(r.adult));
         setMeta(r.meta);
+        logStep('idea');
       } else {
         const hit = setForIdea(idea);
         setSet(hit);
@@ -420,7 +440,10 @@ export default function CreateFlow({ admin, initialUi = 'en' }) {
           const c = aiCard(m.text);
           local.cards = local.cards.map((x) => (x.en === m.from ? c : x));
           setDeck((d) => ({ ...d, cards: d.cards.map((x) => (x.en === m.from ? c : x)) }));
-        } else if (m.type === 'done') setMeta(m.meta);
+        } else if (m.type === 'done') {
+          setMeta(m.meta);
+          logStep('deck', { size: count, lang, adult: adultOn });
+        }
         else if (m.type === 'error') throw apiError(m, s.errorGeneric);
       });
     } catch (e) {
@@ -460,6 +483,7 @@ export default function CreateFlow({ admin, initialUi = 'en' }) {
         replace: old[textLang], cards: deck.cards.map((c) => c[textLang]), rejected: rejected.current,
       });
       reject(old[textLang]);
+      logDropped('swap', old[textLang]);
       setDeck((d) => ({ ...d, cards: d.cards.map((c) => (c.id === id ? aiCard(r.text) : c)) }));
       setMeta(r.meta);
       if (r.swapsLeft != null) setSwapsLeft(r.swapsLeft);
@@ -487,7 +511,10 @@ export default function CreateFlow({ admin, initialUi = 'en' }) {
   };
 
   const removeCard = (id) => {
-    if (ai) reject(deck.cards.find((c) => c.id === id)?.[textLang]);
+    const text = deck.cards.find((c) => c.id === id)?.[textLang];
+    if (ai) reject(text);
+    // Editing a saved deck is a later change of mind, not a verdict on the AI.
+    if (ai && !editing) logDropped('remove', text);
     setDeck((d) => ({ ...d, cards: d.cards.filter((c) => c.id !== id) }));
   };
   const moveCard = (from, to) => setDeck((d) => {
@@ -569,7 +596,7 @@ export default function CreateFlow({ admin, initialUi = 'en' }) {
       return next;
     });
   };
-  const playFrom = (i) => { setCardIdx(i); setView('cards'); };
+  const playFrom = (i) => { setCardIdx(i); setView('cards'); logStep('play'); };
   const openDeck = (d) => { setPlaying(d); setCardIdx(0); setView('cover'); };
   // "My decks" before writing a new one: the latest deck's cover with the
   // list already open. Saved decks live in this browser, so no code is needed.
@@ -578,11 +605,14 @@ export default function CreateFlow({ admin, initialUi = 'en' }) {
   const goCard = (d) => {
     const i = cardIdx + d;
     if (i < 0) return;
-    if (i >= playDeck.cards.length) { keepPlace(playing.id, 0); setView('end'); return; }
+    if (i >= playDeck.cards.length) { keepPlace(playing.id, 0); setView('end'); logStep('finish'); return; }
     setCardIdx(i);
     keepPlace(playing.id, i);
   };
   const playingCards = step === 3 && view === 'cards' && Boolean(playDeck);
+  // Each card shown from one's own deck, next to the game's built-in card
+  // views in /insights.
+  useEffect(() => { if (playingCards) track('create_card', { what: 'card' }); }, [playingCards, cardIdx]);
 
   // Keep the screen on while the cards are out: the phone lies on the table
   // or goes round the group. Browsers without it just dim as usual.

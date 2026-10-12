@@ -6,6 +6,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { QUESTION_BY_ID, CATEGORIES, LANGUAGES } from '@/lib/content';
+import { track } from '@/lib/analytics';
 
 const CAT_COLOR = {
   future: '#407aea', dnd: '#407aea', deep: '#8a63de', night: '#8a63de', couples: '#b950b2', duo: '#b950b2', spicy: '#d3456c',
@@ -33,7 +34,24 @@ function fmtNum(n) {
   return (n || 0).toLocaleString('en-US');
 }
 
-const MIN_VOTES = 3; // a question needs at least this many like+down votes before it shows up in Most/Rarely loved
+const CREATE_STEPS = [
+  ['open', 'Opened /create'],
+  ['code', 'Had a working code'],
+  ['idea', 'Refined an idea'],
+  ['deck', 'Got a deck'],
+  ['play', 'Started playing'],
+  ['finish', 'Played to the end'],
+];
+
+// When each deck went live (git history), so a new one isn't read as unpopular.
+const DECK_ADDED = {
+  union: '2026-09-29', night: '2026-09-29', reply: '2026-09-29', dnd: '2026-09-29', door: '2026-09-29',
+  fries: '2026-09-29', duo: '2026-09-29', lights: '2026-10-11', cart: '2026-10-11', snow: '2026-10-11',
+};
+const NEW_DAYS = 14;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+const MIN_VOTES = 3; // a question needs at least this many ⭐+✕ before it shows up in Most saved / Often left on
 
 export default function InsightsDashboard() {
   const [range, setRange] = useState('30');
@@ -42,6 +60,9 @@ export default function InsightsDashboard() {
   const [stats, setStats] = useState(null);
   const [error, setError] = useState('');
   const [hoverIdx, setHoverIdx] = useState(null);
+
+  // Opening this page marks the device as the owner's, so it isn't counted.
+  useEffect(() => { track('owner'); }, []);
 
   useEffect(() => {
     setError('');
@@ -79,42 +100,111 @@ export default function InsightsDashboard() {
       return { code, count, pct, name: LANGUAGES.find((l) => l.code === code)?.name || code };
     });
   }, [data]);
-  const topLang = languageRows[0];
+
+  // New devices that opened the game again (from /api/analytics).
+  const backPct = (r) => (r?.of ? `${Math.round((r.back / r.of) * 100)}%` : '—');
+  const retention = data?.retention;
+
+  // /create: how many people reached each step, as a share of those who opened it.
+  const createRows = useMemo(() => {
+    const steps = data?.create?.steps;
+    if (!steps) return [];
+    const base = steps.open || 0;
+    return CREATE_STEPS.map(([id, label]) => ({
+      id,
+      label,
+      n: steps[id] || 0,
+      pct: base ? Math.round(((steps[id] || 0) / base) * 100) : 0,
+    }));
+  }, [data]);
+
+  // What the written decks were like, as rows for a small bar list.
+  const mix = data?.create?.mix;
+  const mixRows = (counts, sortBy, label) => {
+    const entries = Object.entries(counts || {});
+    const total = entries.reduce((a, [, n]) => a + n, 0) || 1;
+    return entries
+      .sort(sortBy)
+      .map(([k, n]) => ({ k, label: label(k), n, pct: Math.round((n / total) * 100) }));
+  };
+  const DEVICE_LABEL = { ios: ['iPhone', '#e8e6e1'] /* iPads too */, android: ['Android', '#25a351'], computer: ['Computer', '#5983e9'] };
+  const deviceRows = mixRows(data?.devices, ([, a], [, b]) => b - a, (k) => DEVICE_LABEL[k]?.[0] || k)
+    .map((r) => ({ ...r, color: DEVICE_LABEL[r.k]?.[1] || INK }));
+  const sizeRows = mixRows(mix?.size, ([a], [b]) => Number(a) - Number(b), (k) => `${k} cards`);
+  const langRows = mixRows(mix?.lang, ([, a], [, b]) => b - a, (k) => (k === 'other' ? 'Other' : k.toUpperCase()));
+  const adultDecks = mix?.adult?.['1'] || 0;
+  const mixDecks = adultDecks + (mix?.adult?.['0'] || 0);
+  const decksWritten = data?.create?.decksWritten || 0;
+  const perDeck = (n) => (decksWritten ? (n / decksWritten).toFixed(1) : '—');
+
+  // Cards played: the game's built-in decks vs people's own /create decks.
+  const ownCards = mix?.cards?.card || 0;
+  const builtInCards = Object.values(data?.views?.byCategory || {}).reduce((a, b) => a + b, 0);
+  const ownPct = ownCards + builtInCards ? Math.round((ownCards / (ownCards + builtInCards)) * 100) : 0;
 
   const categoryShare = useMemo(() => {
     if (!data) return {};
     return activeLang === 'all' ? data.views?.byCategory || {} : data.views?.byCategoryByLang?.[activeLang] || {};
   }, [data, activeLang]);
 
-  const categoryRows = useMemo(() => {
-    const entries = Object.entries(categoryShare).sort(([, a], [, b]) => b - a);
-    const total = entries.reduce((s, [, n]) => s + n, 0) || 1;
-    let remaining = 100;
-    return entries.map(([id, count], i) => {
-      const cat = CATEGORIES.find((c) => c.id === id);
-      const pct = i === entries.length - 1 ? remaining : Math.round((count / total) * 100);
-      remaining -= pct;
+  // Deck popularity: people who played each deck (from Oct 12), cards seen,
+  // cards per person, and the saved share of its ⭐/✕. Decks no longer in the
+  // game are folded into one "Old decks" row at the bottom.
+  const deckRows = useMemo(() => {
+    const people = (activeLang === 'all' ? data?.decks?.all : data?.decks?.byLang?.[activeLang]) || {};
+    const votes = {};
+    for (const [qid, v] of Object.entries(stats || {})) {
+      const deck = QUESTION_BY_ID.get(qid)?.[0];
+      if (!deck || v?.like == null) continue;
+      const t = (votes[deck] ||= { like: 0, down: 0 });
+      t.like += v.like || 0;
+      t.down += v.down || 0;
+    }
+    const row = (id) => {
+      const p = people[id] || { people: 0, cards: 0 };
+      const v = votes[id];
+      const voted = v ? v.like + v.down : 0;
       return {
-        id,
-        count,
-        pct,
-        icon: cat?.icon || '•',
-        name: cat?.names?.en || id,
-        note: cat?.note,
-        color: CAT_COLOR[id] || INK,
+        people: p.people,
+        cards: categoryShare[id] || 0,
+        depth: p.people ? p.cards / p.people : null,
+        love: voted >= MIN_VOTES ? Math.round((v.like / voted) * 100) : null,
       };
-    });
-  }, [categoryShare]);
-  const maxCategoryCount = categoryRows[0]?.count || 1;
+    };
+    const live = CATEGORIES.map((cat) => ({
+      id: cat.id,
+      icon: cat.icon,
+      name: cat.names.en,
+      note: cat.note,
+      added: DECK_ADDED[cat.id],
+      color: CAT_COLOR[cat.id] || INK,
+      ...row(cat.id),
+    })).sort((a, b) => b.people - a.people || b.cards - a.cards);
+    const liveIds = new Set(CATEGORIES.map((c) => c.id));
+    const oldIds = [...new Set([...Object.keys(categoryShare), ...Object.keys(people)])].filter((id) => !liveIds.has(id));
+    if (oldIds.length) {
+      const old = oldIds.map(row);
+      live.push({
+        id: 'old',
+        icon: '·',
+        name: 'Old decks',
+        old: true,
+        color: UNLOVED,
+        people: old.reduce((a, r) => a + r.people, 0),
+        cards: old.reduce((a, r) => a + r.cards, 0),
+        depth: null,
+        love: null,
+      });
+    }
+    return live;
+  }, [data, stats, activeLang, categoryShare]);
+  // Bars follow people once they're counted; until then, cards.
+  const byPeople = deckRows.some((r) => r.people > 0);
+  const deckMax = Math.max(1, ...deckRows.map((r) => (byPeople ? r.people : r.cards)));
 
   const sessionsForCps = activeLang === 'all' ? sessionsTotal : data?.sessions?.byLang?.[activeLang] || 0;
   const viewsForCps = Object.values(categoryShare).reduce((s, n) => s + n, 0);
   const cps = sessionsForCps ? (viewsForCps / sessionsForCps).toFixed(1) : '—';
-
-  const filterAll = data?.views?.byFilterMode?.all || 0;
-  const filterNarrowed = data?.views?.byFilterMode?.narrowed || 0;
-  const filterTotal = filterAll + filterNarrowed;
-  const filterAllPct = filterTotal ? Math.round((filterAll / filterTotal) * 100) : 0;
 
   const mostSeen = useMemo(() => {
     if (!data) return [];
@@ -167,13 +257,19 @@ export default function InsightsDashboard() {
           </div>
 
           <div style={S.tiles}>
-            <Tile label="SESSIONS" value={fmtNum(sessionsTotal)} sub={RANGES.find((r) => r.key === range)?.label} />
-            <Tile label="RETURNING" value={`${returningPct}%`} sub={`${fmtNum(returning)} of ${fmtNum(sessionsTotal)} came back`} />
-            <Tile label="CARDS / SESSION" value={cps} sub={activeLang === 'all' ? 'avg. deck depth reached' : `avg. deck depth — ${LANGUAGES.find((l) => l.code === activeLang)?.name}`} />
-            <Tile label="TOP LANGUAGE" value={topLang ? topLang.code.toUpperCase() : '—'} sub={topLang ? `${topLang.pct}% of sessions` : 'no data yet'} />
+            <Tile label="GAMES STARTED" value={fmtNum(sessionsTotal)} sub={`START presses · ${RANGES.find((r) => r.key === range)?.label}`} />
+            <Tile label="FROM A KNOWN DEVICE" value={`${returningPct}%`} sub={`${fmtNum(returning)} of ${fmtNum(sessionsTotal)} starts, not people`} />
+            <Tile label="CARDS / START" value={cps} sub={activeLang === 'all' ? 'cards seen per START press' : `cards per START — ${LANGUAGES.find((l) => l.code === activeLang)?.name}`} />
+            <Tile
+              label="NEW PEOPLE CAME BACK"
+              value={backPct(retention?.nextDay)}
+              sub={retention?.nextDay?.of
+                ? `next day · ${backPct(retention.week)} within 7 days (of ${fmtNum(retention.nextDay.of)} new)`
+                : 'counting from Oct 12'}
+            />
           </div>
 
-          <Section title="VISITS OVER TIME" sub="Sessions started, by day">
+          <Section title="GAMES STARTED OVER TIME" sub="START presses, by day. Pressing START again counts again; /create visits don't count.">
             {chartDays.length === 0 ? (
               <p style={S.muted}>No visits recorded yet for this window.</p>
             ) : (
@@ -216,7 +312,7 @@ export default function InsightsDashboard() {
                 </svg>
                 <div style={S.axisRow}>
                   <span>{fmtDate(chartDays[0].date)}</span>
-                  <span>{hoverIdx != null && chartDays[hoverIdx] ? `${fmtDate(chartDays[hoverIdx].date)} — ${fmtNum(chartDays[hoverIdx].count)} sessions` : ''}</span>
+                  <span>{hoverIdx != null && chartDays[hoverIdx] ? `${fmtDate(chartDays[hoverIdx].date)} — ${fmtNum(chartDays[hoverIdx].count)} starts` : ''}</span>
                   <span>{fmtDate(chartDays[chartDays.length - 1].date)}</span>
                 </div>
               </div>
@@ -225,13 +321,13 @@ export default function InsightsDashboard() {
 
           <div style={S.grid2}>
             <div style={S.panel}>
-              <div style={S.sectionTitle}>NEW VS RETURNING</div>
+              <div style={S.sectionTitle}>STARTS: NEW VS KNOWN DEVICE</div>
               <div style={S.splitBar}>
                 <span style={{ width: `${newPct}%`, background: INK }} />
                 <span style={{ width: `${returningPct}%`, background: UNLOVED }} />
               </div>
-              <LegendRow color={INK} label="New" value={`${fmtNum(newSessions)} `} sub={`${newPct}%`} />
-              <LegendRow color={UNLOVED} label="Returning" value={`${fmtNum(returning)} `} sub={`${returningPct}%`} />
+              <LegendRow color={INK} label="First start on a device" value={`${fmtNum(newSessions)} `} sub={`${newPct}%`} />
+              <LegendRow color={UNLOVED} label="Device seen before" value={`${fmtNum(returning)} `} sub={`${returningPct}%`} />
             </div>
             <div style={S.panel}>
               <div style={S.sectionTitle}>LANGUAGES</div>
@@ -244,9 +340,92 @@ export default function InsightsDashboard() {
             </div>
           </div>
 
+          <Section title="DEVICES" sub="People (devices) by what they play on, game and /create. Counting from Oct 12.">
+            <div style={S.card}>
+              {deviceRows.length === 0 ? (
+                <p style={S.muted}>No data yet in this window.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
+                  {deviceRows.map((r) => (
+                    <BarRow key={r.k} name={r.label} widthPct={r.pct} value={`${fmtNum(r.n)} ${r.pct}%`} color={r.color} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </Section>
+
+          <Section title="MAKE YOUR OWN CARDS" sub="People (devices) who reached each step of /create, out of those who opened it">
+            <div style={S.card}>
+              {createRows[0]?.n ? (
+                <>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {createRows.map((r) => (
+                      <div key={r.id} style={S.funnelRow}>
+                        <span style={S.barRowName}>{r.label}</span>
+                        <span style={S.barTrack}>
+                          <span style={{ ...S.barFill, width: `${r.pct}%`, background: '#d3456c' }} />
+                        </span>
+                        <span style={S.barVal}>{fmtNum(r.n)} · {r.pct}%</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={S.hr} />
+                  <LegendRow
+                    color={GOLD}
+                    label="Wrote 2 or more decks"
+                    value={`${fmtNum(data.create.twoDecks)} `}
+                    sub={`of ${fmtNum(data.create.steps.deck)} who got a deck`}
+                  />
+                  <div style={S.hr} />
+                  <div style={S.miniLabel}>CARD QUALITY — WHILE MAKING A DECK</div>
+                  <LegendRow color="#d3456c" label="↻ swapped, per deck" value={`${perDeck(mix?.cards?.swap || 0)} `} sub={`${fmtNum(mix?.cards?.swap)} in all`} />
+                  <LegendRow color="#d3456c" label="✕ removed, per deck" value={`${perDeck(mix?.cards?.remove || 0)} `} sub={`${fmtNum(mix?.cards?.remove)} in all`} />
+                  {mixDecks > 0 && (
+                    <>
+                      <div style={S.hr} />
+                      <div style={S.grid2Plain}>
+                        <div>
+                          <div style={S.miniLabel}>DECK SIZE</div>
+                          <div style={S.mixList}>
+                            {sizeRows.map((r) => (
+                              <BarRow key={r.k} name={r.label} widthPct={r.pct} value={`${fmtNum(r.n)} ${r.pct}%`} color={GOLD} />
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <div style={S.miniLabel}>DECK LANGUAGE</div>
+                          <div style={S.mixList}>
+                            {langRows.map((r) => (
+                              <BarRow key={r.k} name={r.label} widthPct={r.pct} value={`${fmtNum(r.n)} ${r.pct}%`} color={LANG_COLOR[r.k] || INK} />
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      <LegendRow color="#d3456c" label="18+ decks" value={`${fmtNum(adultDecks)} `} sub={`${Math.round((adultDecks / mixDecks) * 100)}%`} />
+                    </>
+                  )}
+                </>
+              ) : (
+                <p style={S.muted}>No one has opened /create in this window yet (counting from Oct 12).</p>
+              )}
+            </div>
+          </Section>
+
+          <Section title="FEATURES" sub="People (devices) who used each one in this window">
+            <div style={S.card}>
+              <LegendRow color={INK} label="TV mode" value={`${fmtNum(data.features?.tv?.people)} people `} sub={`${fmtNum(data.features?.tv?.times)} times`} />
+              <LegendRow color={INK} label="Shared a card" value={`${fmtNum(data.features?.share?.people)} people `} sub={`${fmtNum(data.features?.share?.times)} times`} />
+              <div style={S.hr} />
+              <div style={S.miniLabel}>CARDS PLAYED</div>
+              <LegendRow color={INK} label="Built-in decks" value={`${fmtNum(builtInCards)} `} sub={`${100 - ownPct}%`} />
+              <LegendRow color="#d3456c" label="Own decks (/create)" value={`${fmtNum(ownCards)} `} sub={`${ownPct}%`} />
+              <p style={S.muted}>Counting TV, own-deck shares and own-deck cards from Oct 12.</p>
+            </div>
+          </Section>
+
           <Section
-            title="CATEGORIES"
-            sub="Tap a language to see what's popular within it"
+            title="DECKS"
+            sub="Which decks people pick and stay with. Tap a language to see it there."
             right={
               <div style={S.chipRow}>
                 <button onClick={() => setActiveLang('all')} style={activeLang === 'all' ? S.chipActive : S.chip}>ALL</button>
@@ -259,37 +438,43 @@ export default function InsightsDashboard() {
             }
           >
             <div style={S.card}>
-              <div style={S.miniLabel}>CATEGORY FILTER USE — SHARE OF CARD VIEWS</div>
-              <div style={{ ...S.splitBar, marginTop: 12 }}>
-                <span style={{ width: `${filterAllPct}%`, background: INK }} />
-                <span style={{ width: `${100 - filterAllPct}%`, background: UNLOVED }} />
+              <div style={{ ...S.deckRow, ...S.deckHead }}>
+                <span />
+                <span>DECK</span>
+                <span />
+                <span style={S.num}>PEOPLE</span>
+                <span style={S.num}>CARDS</span>
+                <span style={S.num}>PER PERSON</span>
+                <span style={S.num}>SAVED</span>
               </div>
-              <LegendRow color={INK} label={'Browsing "All" — never narrowed the filter'} value="" sub={`${filterAllPct}%`} />
-              <LegendRow color={UNLOVED} label="Narrowed to one or a few categories" value="" sub={`${100 - filterAllPct}%`} />
-              <div style={S.hr} />
-              <div style={S.miniLabel}>
-                SHARE OF CARD VIEWS, BY CATEGORY — {activeLang === 'all' ? 'ALL LANGUAGES' : LANGUAGES.find((l) => l.code === activeLang)?.name.toUpperCase()}
-              </div>
-              {categoryRows.length === 0 && <p style={S.muted}>No data yet.</p>}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14 }}>
-                {categoryRows.map((c) => (
-                  <div key={c.id} style={S.catRow}>
-                    <span style={S.catIcon}>{c.icon}</span>
+              {deckRows.map((d) => {
+                const fresh = d.added && Date.now() - Date.parse(d.added) < NEW_DAYS * DAY_MS;
+                return (
+                  <div key={d.id} style={{ ...S.deckRow, opacity: d.old ? 0.5 : 1 }}>
+                    <span style={S.catIcon}>{d.icon}</span>
                     <span style={S.catName}>
-                      {c.name}
-                      {c.note && <span style={S.catNote}> {c.note}</span>}
+                      {d.name}
+                      {d.note && <span style={S.catNote}> {d.note}</span>}
+                      {fresh && <span style={S.newTag}> NEW · {fmtDate(d.added)}</span>}
                     </span>
                     <span style={S.barTrack}>
-                      <span style={{ ...S.barFill, width: `${Math.round((c.count / maxCategoryCount) * 100)}%`, background: c.color }} />
+                      <span style={{ ...S.barFill, width: `${Math.round(((byPeople ? d.people : d.cards) / deckMax) * 100)}%`, background: d.color }} />
                     </span>
-                    <span style={S.barVal}><b>{c.pct}%</b></span>
+                    <span style={S.num}><b>{fmtNum(d.people)}</b></span>
+                    <span style={S.num}>{fmtNum(d.cards)}</span>
+                    <span style={S.num}>{d.depth == null ? '—' : d.depth.toFixed(1)}</span>
+                    <span style={S.num}>{d.love == null ? '—' : `${d.love}%`}</span>
                   </div>
-                ))}
-              </div>
+                );
+              })}
+              <p style={S.muted}>
+                People and cards per person are counted from Oct 12. Saved = ⭐ saved vs ✕ left the deck on a card; all-time, all languages, needs {MIN_VOTES}+.
+                A deck marked NEW has had less time to be found.
+              </p>
             </div>
           </Section>
 
-          <Section title="QUESTIONS" sub={`Like/dislike % is all-time (needs ${MIN_VOTES}+ votes) — views scope to the range above`}>
+          <Section title="QUESTIONS" sub={`Saved % = ⭐ saved vs ✕ (which also leaves the deck, so it often just means "stopped here"). All-time, needs ${MIN_VOTES}+. Views follow the range above.`}>
             <div style={S.qGrid}>
               <QCol title="MOST SEEN" dotColor={INK}>
                 {mostSeen.length === 0 && <p style={S.muted}>No views yet.</p>}
@@ -297,16 +482,16 @@ export default function InsightsDashboard() {
                   <QItem key={q.qid} rank={i + 1} text={questionText(q.qid)} catColor={CAT_COLOR[questionCat(q.qid)?.id]} catName={questionCat(q.qid)?.names?.en} meta={`${fmtNum(q.count)} views`} />
                 ))}
               </QCol>
-              <QCol title="MOST LOVED" dotColor={GOLD}>
+              <QCol title="MOST SAVED ⭐" dotColor={GOLD}>
                 {mostLoved.length === 0 && <p style={S.muted}>Not enough votes yet.</p>}
                 {mostLoved.map((q, i) => (
-                  <QItem key={q.qid} rank={i + 1} text={questionText(q.qid)} catColor={CAT_COLOR[questionCat(q.qid)?.id]} catName={questionCat(q.qid)?.names?.en} meta={`${q.percent}% ♥`} />
+                  <QItem key={q.qid} rank={i + 1} text={questionText(q.qid)} catColor={CAT_COLOR[questionCat(q.qid)?.id]} catName={questionCat(q.qid)?.names?.en} meta={`${q.percent}% saved · ${fmtNum(q.like)} ⭐`} />
                 ))}
               </QCol>
-              <QCol title="RARELY LOVED — CONSIDER CUTTING" dotColor={UNLOVED}>
+              <QCol title="OFTEN LEFT ON ✕ — CHECK THESE" dotColor={UNLOVED}>
                 {leastLoved.length === 0 && <p style={S.muted}>Not enough votes yet.</p>}
                 {leastLoved.map((q, i) => (
-                  <QItem key={q.qid} rank={i + 1} text={questionText(q.qid)} catColor={CAT_COLOR[questionCat(q.qid)?.id]} catName={questionCat(q.qid)?.names?.en} meta={`${q.percent}% ♥`} />
+                  <QItem key={q.qid} rank={i + 1} text={questionText(q.qid)} catColor={CAT_COLOR[questionCat(q.qid)?.id]} catName={questionCat(q.qid)?.names?.en} meta={`${fmtNum(q.down)} ✕ · ${q.percent}% saved`} />
                 ))}
               </QCol>
             </div>
@@ -436,10 +621,16 @@ const S = {
   legendSub: { color: 'rgba(232,230,225,.42)', fontSize: 10, marginLeft: 4 },
   miniLabel: { ...mono(9, 600, '.1em'), color: 'rgba(232,230,225,.42)' },
   hr: { height: 1, background: 'rgba(232,230,225,.12)', margin: '18px 0' },
-  catRow: { display: 'grid', gridTemplateColumns: '24px minmax(90px, 130px) 1fr 56px', alignItems: 'center', gap: 10 },
+  deckRow: { display: 'grid', gridTemplateColumns: '24px minmax(150px, 1.4fr) minmax(60px, 1fr) 52px 52px 70px 44px', alignItems: 'center', gap: 10, padding: '5px 0', minWidth: 560 },
+  deckHead: { ...mono(9, 600, '.1em'), color: 'rgba(232,230,225,.42)', paddingBottom: 8, borderBottom: '1px solid rgba(232,230,225,.12)', marginBottom: 6 },
+  num: { fontSize: 11, textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: 'rgba(232,230,225,.62)', whiteSpace: 'nowrap' },
+  newTag: { color: '#e8c468', fontSize: 9, letterSpacing: '.06em' },
   catIcon: { fontSize: 14, textAlign: 'center' },
   catName: { fontSize: 11, color: 'rgba(232,230,225,.62)', whiteSpace: 'nowrap' },
   catNote: { color: 'rgba(232,230,225,.42)', fontSize: 9 },
+  grid2Plain: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 24, marginBottom: 6 },
+  mixList: { display: 'flex', flexDirection: 'column', gap: 9, marginTop: 12 },
+  funnelRow: { display: 'grid', gridTemplateColumns: 'minmax(110px, 160px) 1fr 76px', alignItems: 'center', gap: 10 },
   barRow: { display: 'grid', gridTemplateColumns: '78px 1fr 76px', alignItems: 'center', gap: 10 },
   barRowName: { fontSize: 11, color: 'rgba(232,230,225,.62)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
   barTrack: { position: 'relative', height: 14, background: '#1d1a20', borderRadius: 3, overflow: 'hidden' },

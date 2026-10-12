@@ -62,7 +62,8 @@ export function ShareSheet({ s, lang, id, text: ownText, fromSaved, onClose }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [surface, text]);
 
-  useEffect(() => { if (id) track('share_open', { question: id, lang }); }, [id, lang]);
+  // A /create card has no id; it still counts as a share (app/api/track).
+  useEffect(() => { track('share_open', id ? { question: id, lang } : { lang }); }, [id, lang]);
 
   useEffect(() => {
     let url;
