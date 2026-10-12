@@ -32,6 +32,31 @@ export async function overDailyLimit() {
   return n > DAILY_LIMIT;
 }
 
+// Running total of what every AI call cost this month (deck, clarify, ↻ and
+// the fix pass), for /create/admin. Counted from 2026-10-12; earlier spend
+// is only in the Anthropic console.
+const spendKey = () => `tralala:create:spend:${new Date().toISOString().slice(0, 7)}`;
+function addSpend(cost) {
+  if (!cost) return;
+  if (!process.env.KV_REST_API_URL) {
+    memCount.set(spendKey(), (memCount.get(spendKey()) || 0) + cost);
+    return;
+  }
+  kv.incrbyfloat(spendKey(), cost)
+    .then((v) => (v === cost ? kv.expire(spendKey(), 60 * 60 * 24 * 400) : null))
+    .catch((err) => console.error('[create] could not add spend', err));
+}
+
+// What /create/admin shows at the top: this month's spend and today's AI
+// calls against the daily cap (calls past the cap were turned away).
+export async function usage() {
+  const callsKey = `tralala:create:calls:${new Date().toISOString().slice(0, 10)}`;
+  const [spend, calls] = process.env.KV_REST_API_URL
+    ? await Promise.all([kv.get(spendKey()), kv.get(callsKey)])
+    : [memCount.get(spendKey()), memCount.get(callsKey)];
+  return { spendMonth: Number(spend) || 0, callsToday: Number(calls) || 0, dailyLimit: DAILY_LIMIT };
+}
+
 function openStream({ model, effort, system, prompt, schema, maxTokens, signal }) {
   const m = MODELS[model] || MODELS.sonnet;
   const stream = client.beta.messages.stream({
@@ -56,6 +81,7 @@ function finish(name, m, msg, started) {
   const { input_tokens: inTok = 0, output_tokens: outTok = 0 } = msg.usage || {};
   const cost = (inTok * m.inPerM + outTok * m.outPerM) / 1e6;
   const meta = { model: m.label, servedBy: msg.model, ms: Date.now() - started, inTok, outTok, cost: Math.round(cost * 10000) / 10000 };
+  addSpend(cost);
   console.log('[create]', name, JSON.stringify(meta));
   return { text, meta };
 }

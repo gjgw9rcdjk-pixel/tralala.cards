@@ -4,6 +4,7 @@
 // on success reloads /admin without the key, which then shows the menu.
 
 import { useState } from 'react';
+import { track } from '@/lib/analytics';
 
 const INK = '#e8e6e1';
 
@@ -25,6 +26,7 @@ export default function AdminLogin() {
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
+        track('owner'); // marks this device as the owner's (app/api/track)
         window.location.replace('/admin');
         return;
       }
