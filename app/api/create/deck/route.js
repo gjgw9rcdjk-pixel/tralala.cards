@@ -1,9 +1,12 @@
-// Step 3 of /create: write the whole deck (15-50 cards) plus a short name.
+// Step 3 of /create: write the whole deck (15-50 cards) plus a short name
+// and one emoji for it.
 // Streams newline-delimited JSON so the page can show each card as soon as
 // the model finishes it:
 //   {"type":"deck","id":"...","left":4}         (promo code only: deck id for
 //                                                ↻, decks left on the code)
 //   {"type":"name","name":"..."}
+//   {"type":"icon","icon":"🎂"}               (may be missing if the model
+//                                                didn't give a real emoji)
 //   {"type":"card","text":"...","level":2}      (one per card)
 //   {"type":"fix","from":"...","text":"..."}    (code checks found a problem
 //                                                and the card was rewritten)
@@ -22,6 +25,7 @@ const schema = {
   type: 'object',
   properties: {
     name: { type: 'string' },
+    icon: { type: 'string' },
     cards: {
       type: 'array',
       items: {
@@ -35,7 +39,7 @@ const schema = {
       },
     },
   },
-  required: ['name', 'cards'],
+  required: ['name', 'icon', 'cards'],
   additionalProperties: false,
 };
 
@@ -43,8 +47,14 @@ const schema = {
 // order, so a card is complete once its closing brace has arrived.
 const STR = '"((?:[^"\\\\]|\\\\.)*)"';
 const NAME_RE = new RegExp(`"name"\\s*:\\s*${STR}`);
+const ICON_RE = new RegExp(`"icon"\\s*:\\s*${STR}`);
 const CARD_RE = new RegExp(`\\{\\s*"text"\\s*:\\s*${STR}\\s*,\\s*"level"\\s*:\\s*([123])\\s*\\}`, 'g');
 const unquote = (raw) => JSON.parse(`"${raw}"`);
+
+// The first emoji in the model's answer (keeps skin tones and joined emoji
+// like 👨‍👩‍👧 whole), or '' if there is none.
+const EMOJI_RE = /\p{Extended_Pictographic}(?:\uFE0F|\p{Emoji_Modifier})?(?:\u200D\p{Extended_Pictographic}(?:\uFE0F|\p{Emoji_Modifier})?)*/u;
+const firstEmoji = (text) => (String(text ?? '').match(EMOJI_RE) || [''])[0];
 
 export async function POST(request) {
   // One deck = one generation on the promo code, taken up front.
@@ -74,7 +84,9 @@ Also give the deck a name in ${deckLang}, in the style of the game's own decks:
 - Pick one shape: an everyday phrase, sign or button given a new meaning (Do Not Disturb, Add to Cart, Lights Off); a moment or scene (3AM, First Snow, The Wrong Door); an idiom (Double Trouble); a small absurd image (The Appliance Union, Cold Fries).
 - It makes sense at first sight: no pun that needs explaining, no slogan, nothing cheesy.
 - In a language other than English, use that language's own phrase or idiom, not a translated English one (Cold Fries is "Skonio reikalas" in Lithuanian and "Kłótnie o pietruszkę" in Polish; Double Trouble is "Topf & Deckel" in German).
-- The guest of honour's first name may appear in it if the organiser gave one.`;
+- The guest of honour's first name may appear in it if the organiser gave one.
+
+And pick one emoji for the deck as "icon": a concrete object or symbol that fits the name or the occasion (like 🔕 for Do Not Disturb, 🍟 for Cold Fries, 🚪 for The Wrong Door). Avoid faces and hearts unless nothing else fits.`;
 
   const enc = new TextEncoder();
   const stream = new ReadableStream({
@@ -85,6 +97,8 @@ Also give the deck a name in ${deckLang}, in the style of the game's own decks:
       }, KEEPALIVE_MS);
       let nameSent = false;
       let deckName = '';
+      let iconSent = false;
+      let deckIcon = '';
       let sent = 0;
       const started = Date.now();
       let firstCardMs = null;
@@ -100,6 +114,14 @@ Also give the deck a name in ${deckLang}, in the style of the game's own decks:
             if (!nameSent) {
               const n = soFar.match(NAME_RE);
               if (n) { deckName = clip(unquote(n[1]), 40); send({ type: 'name', name: deckName }); nameSent = true; }
+            }
+            if (!iconSent) {
+              const ic = soFar.match(ICON_RE);
+              if (ic) {
+                deckIcon = firstEmoji(unquote(ic[1]));
+                if (deckIcon) send({ type: 'icon', icon: deckIcon });
+                iconSent = true;
+              }
             }
             const cards = [...soFar.matchAll(CARD_RE)];
             if (firstCardMs == null && cards.length) firstCardMs = Date.now() - started;
@@ -145,7 +167,7 @@ Also give the deck a name in ${deckLang}, in the style of the game's own decks:
         clearInterval(ping);
         await logDeck({
           code: access.admin ? null : body.code,
-          name: deckName,
+          name: deckIcon ? `${deckIcon} ${deckName}` : deckName,
           lang: deckLang,
           count,
           cards: sent,

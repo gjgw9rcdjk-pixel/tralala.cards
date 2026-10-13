@@ -250,7 +250,7 @@ export async function logDeck({ code, name, lang, count, cards, firstCardMs, tot
     await store.push(DECKS_KEY, {
       at: Date.now(),
       code: normalizeCode(code) || null,
-      name: String(name ?? '').slice(0, 40),
+      name: String(name ?? '').slice(0, 48),
       lang: String(lang ?? '').slice(0, 40),
       count,
       cards,

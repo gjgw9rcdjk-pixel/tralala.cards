@@ -7,6 +7,7 @@
 export const MOCK_SETS = [
   {
     id: 'mom60',
+    icon: '🎂',
     chip: { en: '🎂 Mom’s 60th', lt: '🎂 Mamos 60-metis' },
     prompt: {
       en: 'My mom turns 60. Family dinner, about 12 people, three generations at the table.',
@@ -50,6 +51,7 @@ export const MOCK_SETS = [
   },
   {
     id: 'firstDate',
+    icon: '💑',
     chip: { en: '💑 First date', lt: '💑 Pirmas pasimatymas' },
     prompt: {
       en: 'First date with someone from a dating app, we’ve only texted so far. We’re both around 30. Coffee, then a walk. Light and curious so the conversation keeps going, with a little flirting.',
@@ -91,6 +93,7 @@ export const MOCK_SETS = [
   },
   {
     id: 'team',
+    icon: '🏢',
     chip: { en: '🏢 Team party', lt: '🏢 Komandos vakarėlis' },
     prompt: {
       en: 'End-of-year team party, about 20 colleagues, the boss is coming too.',
@@ -134,6 +137,7 @@ export const MOCK_SETS = [
   },
   {
     id: 'friends',
+    icon: '🏕',
     chip: { en: '🏕 Weekend away', lt: '🏕 Draugų savaitgalis' },
     prompt: {
       en: 'Weekend at a cabin with 8 friends. Some we’ve known forever, a couple of new faces.',

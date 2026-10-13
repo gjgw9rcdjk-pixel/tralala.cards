@@ -383,12 +383,12 @@ export default function CreateFlow({ admin, initialUi = 'en' }) {
     setError(null);
     const all = set.cards.map(toCard);
     const first = all.slice(0, DECK_SIZE);
-    setDeck({ id: nextId(), name: '', cards: [] });
+    setDeck({ id: nextId(), name: '', icon: '', cards: [] });
     setSpares(all.slice(DECK_SIZE));
     setMeta(null);
     setWriting({ total: first.length });
     const later = (ms, fn) => liveTimers.current.push(setTimeout(fn, ms));
-    later(LIVE_FIRST_MS / 2, () => setDeck((d) => ({ ...d, name: set.name[textLang] })));
+    later(LIVE_FIRST_MS / 2, () => setDeck((d) => ({ ...d, name: set.name[textLang], icon: set.icon || '' })));
     first.forEach((c, i) => later(LIVE_FIRST_MS + i * LIVE_EACH_MS, () => {
       setDeck((d) => ({ ...d, cards: [...d.cards, c] }));
       if (i === first.length - 1) { liveTimers.current = []; setWriting(null); }
@@ -411,7 +411,7 @@ export default function CreateFlow({ admin, initialUi = 'en' }) {
     const release = await keepAwake();
     // Mirror of what's on screen, so the deck can be saved the moment
     // writing ends, without waiting for "Save & play".
-    const local = { id: nextId(), name: '', cards: [] };
+    const local = { id: nextId(), name: '', icon: '', cards: [] };
     setDeck({ ...local });
     let got = 0;
     try {
@@ -430,6 +430,9 @@ export default function CreateFlow({ admin, initialUi = 'en' }) {
         } else if (m.type === 'name') {
           local.name = m.name;
           setDeck((d) => ({ ...d, name: m.name }));
+        } else if (m.type === 'icon') {
+          local.icon = m.icon;
+          setDeck((d) => ({ ...d, icon: m.icon }));
         } else if (m.type === 'card') {
           got += 1;
           const c = aiCard(m.text);
@@ -533,6 +536,7 @@ export default function CreateFlow({ admin, initialUi = 'en' }) {
     const entry = {
       id: d.id,
       name: d.name.trim() || set.name[textLang] || s.deckTitle,
+      icon: d.icon || prev?.icon || '',
       // AI decks are written in the chosen language; mock decks are EN or LT.
       lang: prev?.lang ?? (set.id === 'ai' && lang !== 'other' ? lang : textLang),
       setId: prev?.setId ?? set.id,
@@ -569,6 +573,7 @@ export default function CreateFlow({ admin, initialUi = 'en' }) {
       setDeck({
         id: playing.id,
         name: playing.name,
+        icon: playing.icon || '',
         cards: playing.cards.map((t) => ({ id: nextId(), en: t, lt: t })),
       });
       setSpares(src.cards.map(toCard).filter((c) => !inDeck.has(c[playing.lang])));
@@ -1152,11 +1157,14 @@ function DeckStep({ s, deck, textLang, setName, swapping, onSwap, onRemove, onMo
         hint={!writing ? (onSwap ? s.deckHint : s.deckEditHint) : deck.cards.length ? s.writingLive : s.writingPrep}
       />
       <label className="tc-label" htmlFor="tc-name">{s.deckName}</label>
-      {writing && !deck.name ? (
-        <div className="tl-field tc-name tc-ghost-line" aria-hidden="true"><span /></div>
-      ) : (
-        <input id="tc-name" className="tl-field tc-name" value={deck.name} maxLength={40} disabled={!!writing} onChange={(e) => setName(e.target.value)} />
-      )}
+      <div className="tc-name-row">
+        {deck.icon && <span className="tc-name-row__icon" aria-hidden="true">{deck.icon}</span>}
+        {writing && !deck.name ? (
+          <div className="tl-field tc-name tc-ghost-line" aria-hidden="true"><span /></div>
+        ) : (
+          <input id="tc-name" className="tl-field tc-name" value={deck.name} maxLength={40} disabled={!!writing} onChange={(e) => setName(e.target.value)} />
+        )}
+      </div>
 
       {notes.map((n) => <div key={n} className="tl-banner tc-note"><span />{n}</div>)}
 
@@ -1405,6 +1413,7 @@ function PlayCover({ s, ui, deck, resumeAt, onRestart, tvOn, onTv, onEdit, saved
         <span className="tc-cover__back tc-cover__back--yellow" aria-hidden="true" />
         <div className="tl-card tc-cover__card">
           <div className="tl-card__label">{s.cardsCount(n)} · {langLabel(deck.lang, ui)}</div>
+          {deck.icon && <div className="tc-cover__icon" aria-hidden="true">{deck.icon}</div>}
           <h1 className="tc-cover__name">{deck.name}</h1>
         </div>
       </div>
@@ -1441,6 +1450,7 @@ function PlayCover({ s, ui, deck, resumeAt, onRestart, tvOn, onTv, onEdit, saved
                 disabled={current}
                 onClick={() => { onOpen(d); setOpen(false); }}
               >
+                {d.icon && <span className="tc-saved__icon" aria-hidden="true">{d.icon}</span>}
                 <span className="tc-saved__name">{d.name}</span>
                 <span className="tc-saved__count">{s.cardsCount(d.cards.length)}</span>
                 <span className="tc-saved__go">{current ? s.nowPlaying : s.open}</span>
