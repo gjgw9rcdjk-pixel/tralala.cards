@@ -35,7 +35,6 @@ Plain words (cards are read aloud, so they must sound like a person, not a chatb
 - No twists like "not X but Y", no dramatic setups, no punchlines built into the question.
 - No lists of three ("laugh, cry and grow") unless the card is a "Name three..." card.
 - No filler or hedges ("perhaps", "kind of", "if you think about it"), no exclamation marks, no emoji.
-- The deck name follows the same rules: plain and warm, not a slogan.
 
 Examples of the tone and shape we want (from the real game; never reuse their topics):
 - [1] What's a sound in your home that seems normal by day and terrifying at 3 a.m.?
