@@ -133,6 +133,9 @@
 
 /* ── 3 · deck ──────────────────────────────────────── */
 .tc-app .tc-name { font: 800 18px var(--display); letter-spacing: -.01em; }
+.tc-app .tc-name-row { display: flex; align-items: center; gap: 10px; }
+.tc-app .tc-name-row > .tc-name { flex: 1; min-width: 0; }
+.tc-app .tc-name-row__icon { flex: none; font-size: 28px; line-height: 1; }
 .tc-app .tc-note { margin-top: 12px; }
 .tc-app .tc-tip {
   margin-top: 14px; display: flex; align-items: center; gap: 12px;
@@ -192,6 +195,7 @@
 .tc-app .tc-saved { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; animation: tc-in .2s ease-out; }
 .tc-app .tc-saved__row { height: 56px; cursor: pointer; }
 .tc-app .tc-saved__row:disabled { cursor: default; border-color: var(--pink); }
+.tc-app .tc-saved__icon { flex: none; font-size: 18px; line-height: 1; }
 .tc-app .tc-saved__name { font: 800 14px var(--body); color: var(--card); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tc-app .tc-saved__count { margin-left: auto; flex: none; font: 600 12px var(--body); color: var(--t3); }
 .tc-app .tc-saved__go { flex: none; min-width: 64px; text-align: right; font: 800 12px var(--body); letter-spacing: .06em; color: var(--pink); }
@@ -206,6 +210,8 @@
 .tc-app .tc-cover__back--blue { background: var(--blue); transform: rotate(5deg) translate(10px, 6px); }
 .tc-app .tc-cover__back--yellow { background: var(--yellow); transform: rotate(-6deg) translate(-8px, 4px); }
 .tc-app .tc-cover__card { min-height: 220px; display: flex; flex-direction: column; justify-content: space-between; cursor: default; touch-action: auto; }
+.tc-app .tc-cover__icon { margin-top: 18px; font-size: 40px; line-height: 1; }
+.tc-app .tc-cover__icon + .tc-cover__name { margin-top: 10px; }
 .tc-app .tc-cover__name { margin: 18px 0 0; font: 800 32px/1.05 var(--display); letter-spacing: -.03em; color: var(--ink); overflow-wrap: anywhere; }
 .tc-app .tc-cover__restart { align-self: center; margin: -10px 0 14px; padding: 8px; }
 .tc-app .tc-cover__acts { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; margin-bottom: 12px; }
