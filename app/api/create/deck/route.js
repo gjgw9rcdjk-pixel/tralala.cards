@@ -68,7 +68,13 @@ ${brief}
 ${answers ? `\nThe organiser's answers:\n<answers>\n${answers}\n</answers>\n` : ''}
 Before answering, quietly draft about 1.5 times as many candidates, drop any that break the rules (generic, too long, duplicate angle, fits any deck, chatbot words${/lithuan|lietuv/i.test(deckLang) ? ', gendered forms' : ''}), and keep the best ${count} in warm-up order.
 
-Also give the deck a short, warm name in ${deckLang} (2-4 words, no quotes, no emoji).`;
+Also give the deck a name in ${deckLang}, in the style of the game's own decks:
+- 1-4 words. No quotes, no emoji, no exclamation mark, no dashes.
+- It hints at the mood instead of describing the content: never the words "questions", "cards" or "deck", and never the occasion word for word ("Mom's 60th Questions" is bad).
+- Pick one shape: an everyday phrase, sign or button given a new meaning (Do Not Disturb, Add to Cart, Lights Off); a moment or scene (3AM, First Snow, The Wrong Door); an idiom (Double Trouble); a small absurd image (The Appliance Union, Cold Fries).
+- It makes sense at first sight: no pun that needs explaining, no slogan, nothing cheesy.
+- In a language other than English, use that language's own phrase or idiom, not a translated English one (Cold Fries is "Skonio reikalas" in Lithuanian and "Kłótnie o pietruszkę" in Polish; Double Trouble is "Topf & Deckel" in German).
+- The guest of honour's first name may appear in it if the organiser gave one.`;
 
   const enc = new TextEncoder();
   const stream = new ReadableStream({
