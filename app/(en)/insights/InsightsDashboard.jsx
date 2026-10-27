@@ -231,6 +231,8 @@ export default function InsightsDashboard() {
     return sliced.map(([date, count]) => ({ date, count }));
   }, [data, range]);
   const chartMax = Math.max(1, ...chartDays.map((d) => d.count));
+  // Round step for the 4 gridline intervals, so the y-axis reads 0/10/20/30/40.
+  const chartStep = [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000].find((s) => s * 4 >= chartMax * 1.05) || Math.ceil(chartMax / 4);
 
   const questionText = (qid) => QUESTION_BY_ID.get(qid)?.[2]?.en || '(deleted question)';
   const questionCat = (qid) => CATEGORIES.find((c) => c.id === QUESTION_BY_ID.get(qid)?.[0]);
@@ -274,47 +276,66 @@ export default function InsightsDashboard() {
               <p style={S.muted}>No visits recorded yet for this window.</p>
             ) : (
               <div style={S.chartWrap}>
-                <svg viewBox="0 0 872 200" preserveAspectRatio="none" style={S.svg}>
-                  {[0, 1, 2, 3, 4].map((t) => (
-                    <line key={t} x1="0" x2="872" y1={4 + (176 / 4) * t} y2={4 + (176 / 4) * t} stroke="rgba(232,230,225,.08)" strokeWidth="1" />
-                  ))}
-                  {(() => {
-                    const stepX = chartDays.length > 1 ? 872 / (chartDays.length - 1) : 0;
-                    const yAt = (v) => 4 + 176 - (v / (chartMax * 1.12)) * 176;
-                    let line = '';
-                    chartDays.forEach((d, i) => {
-                      const x = i * stepX, y = yAt(d.count);
-                      line += `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)} `;
-                    });
-                    const area = `M0,180 L${line.slice(1)}L${((chartDays.length - 1) * stepX).toFixed(1)},180 Z`;
-                    return (
-                      <>
-                        <path d={area} fill={INK} opacity="0.14" stroke="none" />
-                        <path d={line.trim()} fill="none" stroke={INK} strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" />
-                        {hoverIdx != null && chartDays[hoverIdx] && (
-                          <>
-                            <line x1={hoverIdx * stepX} x2={hoverIdx * stepX} y1="4" y2="180" stroke="rgba(232,230,225,.42)" strokeDasharray="2,3" />
-                            <circle cx={hoverIdx * stepX} cy={yAt(chartDays[hoverIdx].count)} r="4" fill={INK} stroke="#0c0c0d" strokeWidth="2" />
-                          </>
+                {(() => {
+                  const stepX = chartDays.length > 1 ? 872 / (chartDays.length - 1) : 0;
+                  const yAt = (v) => 4 + 176 - (v / (chartStep * 4)) * 176;
+                  let line = '';
+                  chartDays.forEach((d, i) => {
+                    const x = i * stepX, y = yAt(d.count);
+                    line += `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)} `;
+                  });
+                  const area = `M0,180 L${line.slice(1)}L${((chartDays.length - 1) * stepX).toFixed(1)},180 Z`;
+                  const hovered = hoverIdx != null ? chartDays[hoverIdx] : null;
+                  // The SVG stretches (preserveAspectRatio="none"), so HTML labels
+                  // are placed by percent of the viewBox instead of inside it.
+                  const xPct = hovered ? (hoverIdx * stepX / 872) * 100 : 0;
+                  const pickDay = (e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setHoverIdx(Math.max(0, Math.min(chartDays.length - 1, Math.round(((e.clientX - rect.left) / rect.width) * (chartDays.length - 1)))));
+                  };
+                  return (
+                    <>
+                      <div style={S.plot}>
+                        {[0, 1, 2, 3, 4].map((t) => (
+                          <span key={t} style={{ ...S.yTick, top: `${((4 + 44 * t) / 200) * 100}%` }}>{fmtNum(chartStep * (4 - t))}</span>
+                        ))}
+                        <svg viewBox="0 0 872 200" preserveAspectRatio="none" style={{ ...S.svg, touchAction: 'pan-y' }}>
+                          {[0, 1, 2, 3, 4].map((t) => (
+                            <line key={t} x1="0" x2="872" y1={4 + 44 * t} y2={4 + 44 * t} stroke="rgba(232,230,225,.08)" strokeWidth="1" />
+                          ))}
+                          <path d={area} fill={INK} opacity="0.14" stroke="none" />
+                          <path d={line.trim()} fill="none" stroke={INK} strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" />
+                          {hovered && (
+                            <>
+                              <line x1={hoverIdx * stepX} x2={hoverIdx * stepX} y1="4" y2="180" stroke="rgba(232,230,225,.42)" strokeDasharray="2,3" />
+                              <circle cx={hoverIdx * stepX} cy={yAt(hovered.count)} r="4" fill={INK} stroke="#0c0c0d" strokeWidth="2" />
+                            </>
+                          )}
+                          <rect
+                            x="0" y="0" width="872" height="180" fill="transparent"
+                            onPointerDown={pickDay}
+                            onPointerMove={pickDay}
+                            onPointerLeave={(e) => { if (e.pointerType === 'mouse') setHoverIdx(null); }}
+                          />
+                        </svg>
+                        {hovered && (
+                          <div style={{
+                            ...S.tip,
+                            left: `calc(${S.plot.paddingLeft}px + (100% - ${S.plot.paddingLeft}px) * ${xPct / 100})`,
+                            top: `${(yAt(hovered.count) / 200) * 100}%`,
+                            transform: `translate(${xPct < 12 ? '-12px' : xPct > 88 ? 'calc(-100% + 12px)' : '-50%'}, calc(-100% - 10px))`,
+                          }}>
+                            <b style={S.tipNum}>{fmtNum(hovered.count)}</b> {hovered.count === 1 ? 'start' : 'starts'} · {fmtDate(hovered.date)}
+                          </div>
                         )}
-                        <rect
-                          x="0" y="0" width="872" height="180" fill="transparent"
-                          onMouseMove={(e) => {
-                            const rect = e.currentTarget.getBoundingClientRect();
-                            const idx = Math.max(0, Math.min(chartDays.length - 1, Math.round(((e.clientX - rect.left) / rect.width) * (chartDays.length - 1))));
-                            setHoverIdx(idx);
-                          }}
-                          onMouseLeave={() => setHoverIdx(null)}
-                        />
-                      </>
-                    );
-                  })()}
-                </svg>
-                <div style={S.axisRow}>
-                  <span>{fmtDate(chartDays[0].date)}</span>
-                  <span>{hoverIdx != null && chartDays[hoverIdx] ? `${fmtDate(chartDays[hoverIdx].date)} — ${fmtNum(chartDays[hoverIdx].count)} starts` : ''}</span>
-                  <span>{fmtDate(chartDays[chartDays.length - 1].date)}</span>
-                </div>
+                      </div>
+                      <div style={{ ...S.axisRow, paddingLeft: S.plot.paddingLeft }}>
+                        <span>{fmtDate(chartDays[0].date)}</span>
+                        <span>{fmtDate(chartDays[chartDays.length - 1].date)}</span>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             )}
           </Section>
@@ -610,6 +631,10 @@ const S = {
   card: { background: '#17151a', border: '1px solid rgba(232,230,225,.12)', borderRadius: 6, padding: '20px 20px 12px', overflowX: 'auto' },
   chartWrap: { background: '#17151a', border: '1px solid rgba(232,230,225,.12)', borderRadius: 6, padding: '18px 18px 12px' },
   svg: { display: 'block', width: '100%', height: 180 },
+  plot: { position: 'relative', paddingLeft: 30 },
+  yTick: { position: 'absolute', left: 0, width: 24, textAlign: 'right', transform: 'translateY(-50%)', ...mono(9, 400, '.04em'), color: 'rgba(232,230,225,.42)', pointerEvents: 'none' },
+  tip: { position: 'absolute', whiteSpace: 'nowrap', pointerEvents: 'none', background: '#0c0c0d', border: '1px solid rgba(232,230,225,.22)', borderRadius: 4, padding: '4px 8px', ...mono(11, 400, '.02em'), color: 'rgba(232,230,225,.7)' },
+  tipNum: { color: INK, fontWeight: 600 },
   axisRow: { display: 'flex', justifyContent: 'space-between', marginTop: 8, ...mono(9, 400, '.04em'), color: 'rgba(232,230,225,.42)' },
   grid2: { display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: 1, background: 'rgba(232,230,225,.12)', border: '1px solid rgba(232,230,225,.12)', borderRadius: 6, overflow: 'hidden', marginTop: 36 },
   panel: { background: '#17151a', padding: 20, overflowX: 'auto' },
